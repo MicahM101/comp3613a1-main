@@ -1,0 +1,33 @@
+{
+  "system": "Student Awards",
+  "actors": [
+    {"name": "Student", "side": "left"},
+    {"name": "Admin", "side": "right"}
+  ],
+  "use_cases": [
+    {
+      "name": "SubmitHours",
+      "actors": ["Student"],
+      "extends": ["Submit Supporting Documents"]
+    },
+    {"name": "Submit Supporting Documents"},
+    {
+      "name": "VerifyHours",
+      "actors": ["Admin"],
+      "includes": ["Check Submitted Hours"],
+      "extends": ["Check Supporting Documents"]
+    },
+    {"name": "Check Submitted Hours"},
+    {"name": "Check Supporting Documents"},
+    {
+      "name": "RedeemProgress",
+      "actors": ["Student"],
+      "includes": ["Choose Reward"]
+    },
+    {"name": "Choose Reward"},
+    {
+      "name": "View Hours Earned",
+      "actors": ["Student", "Admin"]
+    }
+  ]
+}

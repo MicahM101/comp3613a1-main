@@ -1,0 +1,90 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Submit Hours{% endblock %}
+
+{% block subpage_content %}
+<div class="card cause-card-inner mx-auto" style="max-width: 40rem;">
+  <div class="card-body p-4">
+    <h1 class="h5 text-center mb-4">Service Hours Submission Form</h1>
+    <p class="text-muted text-center small mb-4">
+      Fields marked <span class="req-mark req-mark-inline"> *</span> are required.
+    </p>
+
+    <form method="POST" action="{{ url_for('submit_hours_preview') }}" enctype="multipart/form-data" novalidate="false">
+      <div class="mb-4">
+        <label class="form-label fw-semibold req-mark" for="cause_id">1) Choose the cause you served.</label>
+        <select class="form-select" id="cause_id" name="cause_id" required>
+          <option value="" selected disabled>- Select Cause -</option>
+          {% for cause in causes %}
+          <option value="{{ cause.id }}">{{ cause.cause_name }}</option>
+          {% endfor %}
+        </select>
+        <div class="invalid-feedback">Please choose the cause you served.</div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold req-mark" for="hours">2) Enter hours served.</label>
+        <input class="form-control" type="number" id="hours" name="hours" min="0.5" step="0.5" placeholder="e.g. 5" required>
+        <div class="invalid-feedback">Please enter the hours you served.</div>
+      </div>
+
+      <div class="mb-4">
+        <span class="form-label fw-semibold d-block req-mark">3) What were the date and time of your service?</span>
+        <div class="d-flex flex-wrap align-items-end gap-3">
+          <div>
+            <label class="form-label small mb-1 req-mark" for="served_on">Date</label>
+            <input class="form-control" type="date" id="served_on" name="served_on" required>
+            <div class="invalid-feedback">Please add the date.</div>
+          </div>
+          <div>
+            <label class="form-label small mb-1 req-mark" for="time_of_day">Start Time</label>
+            <input class="form-control" type="text" id="time_of_day" name="time_of_day"
+                   placeholder="HH:MM" inputmode="numeric" maxlength="5"
+                   pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$" title="Use 24-hour HH:MM, e.g. 09:30 or 17:45" required>
+            <div class="invalid-feedback">Please enter the start time as HH:MM.</div>
+          </div>
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="meridiem" id="am" value="AM" required>
+              <label class="form-check-label req-mark" for="am">AM</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="meridiem" id="pm" value="PM" required>
+              <label class="form-check-label req-mark" for="pm">PM</label>
+            </div>
+            <div class="invalid-feedback">Choose AM or PM.</div>
+          </div>
+        </div>
+        <small class="text-muted">Enter the time in 24-hour format, then pick AM or PM.</small>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold d-block req-mark">4) Upload Signed Participation Form or equivalent documentation.</label>
+        <div class="upload-drop">
+          <span class="material-symbols-outlined upload-icon">upload_file</span>
+          <input class="form-control" type="file" id="document" name="document" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" required>
+          <small class="text-muted">Browse files — PDF or image of your signed form.</small>
+          <div class="invalid-feedback">Please attach your signed participation form.</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <a class="btn btn-outline-danger" href="{{ url_for('user_home_view') }}">Cancel</a>
+        <button class="btn btn-primary px-4" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block subpage_scripts %}
+<script>
+  // Surface Bootstrap's inline "please fill this in" messages on submit.
+  // The browser still blocks the POST until every required field is filled.
+  const hoursForm = document.querySelector('form[action="{{ url_for('submit_hours_preview') }}"]');
+  if (hoursForm) {
+    hoursForm.addEventListener("submit", function () {
+      hoursForm.classList.add("was-validated");
+    });
+  }
+</script>
+{% endblock %}

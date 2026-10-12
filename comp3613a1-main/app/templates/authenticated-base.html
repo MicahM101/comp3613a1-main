@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block internal_css %}
+<style>
+    body {
+        overflow-x: hidden;
+        background: var(--brand-app-bg);
+    }
+
+    .app-topbar {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 0.9rem clamp(1rem, 4vw, 2.5rem);
+        background: var(--brand-surface);
+        border-bottom: 2px solid var(--brand-navy);
+    }
+
+    .app-topbar .brand-lockup {
+        font-size: 1.15rem;
+        color: var(--brand-navy);
+    }
+
+    .app-topbar .brand-mark {
+        color: var(--brand-navy);
+    }
+
+    .app-tabs {
+        display: flex;
+        gap: 1.25rem;
+        margin-left: auto;
+    }
+
+    .app-tab {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--brand-muted);
+        text-decoration: none;
+        padding-bottom: 0.15rem;
+        border-bottom: 2px solid transparent;
+    }
+
+    .app-tab:hover {
+        color: var(--brand-navy);
+        border-bottom-color: var(--brand-accent-2);
+    }
+
+    .app-tab.active {
+        color: var(--brand-navy);
+        border-bottom-color: var(--brand-accent);
+    }
+
+    .app-account {
+        margin-left: auto;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--brand-muted);
+        white-space: nowrap;
+    }
+
+    .app-tabs + .app-account {
+        margin-left: 1.5rem;
+    }
+
+    .app-main {
+        width: min(1100px, 100%);
+        margin: 0 auto;
+        padding: 1.5rem clamp(1rem, 4vw, 2.5rem) 3rem;
+    }
+
+    .app-main h1 {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--brand-navy);
+    }
+
+    .cause-card-inner {
+        border: 1px solid var(--brand-line);
+        border-radius: var(--brand-radius);
+        box-shadow: 0 1px 3px rgba(15, 36, 55, 0.06);
+    }
+
+    .cause-card-inner .card-title {
+        color: var(--brand-navy);
+    }
+
+    .upload-drop {
+        border: 1.5px dashed color-mix(in srgb, var(--brand-navy) 35%, transparent);
+        border-radius: var(--brand-radius);
+        background: var(--brand-app-bg);
+        padding: 1.25rem;
+        text-align: center;
+    }
+
+    .upload-drop .upload-icon {
+        color: var(--brand-accent-2);
+        font-size: 1.75rem;
+    }
+
+    .upload-drop .form-control {
+        margin: 0.5rem 0;
+    }
+
+    /* Required-field marker */
+    .req-mark::after {
+        content: " *";
+        color: #d64545;
+        font-weight: 700;
+    }
+
+    .req-mark-inline::after {
+        content: none;
+    }
+
+    form.was-validated .form-control:invalid,
+    form.was-validated .form-select:invalid {
+        border-color: #d64545;
+        background-image: none;
+    }
+
+    form.was-validated .form-control:valid,
+    form.was-validated .form-select:valid {
+        border-color: #2f855a;
+    }
+</style>
+{% block additional_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<header class="app-topbar">
+    <a class="brand-lockup" href="{{ url_for('index_view') }}">
+        {% include 'partials/logo.html' %}
+        <span class="brand-wordmark">Student Awards</span>
+    </a>
+
+    <nav class="app-tabs">
+        {% if user.role == 'admin' %}
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/app') }}" href="{{ url_for('user_home_view') }}">Account</a>
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/admin') }}" href="{{ url_for('admin_home_view') }}">Submissions</a>
+        {% else %}
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/causes') }}" href="{{ url_for('causes_view') }}">Causes</a>
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/app') }}" href="{{ url_for('user_home_view') }}">Account</a>
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/rewards') }}" href="{{ url_for('rewards_view') }}">Rewards</a>
+        {% endif %}
+    </nav>
+
+    <span class="app-account">{{ 'Admin Account' if user.role == 'admin' else 'Student Account' }}</span>
+</header>
+
+<main class="app-main">
+    {% for message in get_flashed_messages(request) %}
+    <div class="alert alert-{{ message.type }}" role="alert">{{ message.message }}</div>
+    {% endfor %}
+
+    {% block subpage_content %}{% endblock %}
+</main>
+
+{% block subpage_scripts %}{% endblock %}
+{% endblock %}

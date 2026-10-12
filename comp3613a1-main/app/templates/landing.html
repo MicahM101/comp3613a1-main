@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Student Awards{% endblock %}
+
+{% block content %}
+<div class="landing">
+  <div class="landing-orb" aria-hidden="true"></div>
+  <div class="landing-orb landing-orb-2" aria-hidden="true"></div>
+
+  <header class="landing-nav">
+    <a class="brand-lockup" href="{{ url_for('index_view') }}">
+      {% include 'partials/logo.html' %}
+      <span class="brand-wordmark">Student Awards</span>
+    </a>
+    <div class="landing-nav-actions">
+      {% if user_logged_in %}
+      <a class="btn-landing btn-landing-ghost" href="{{ app_home }}">Open app</a>
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('logout') }}">Sign out</a>
+      {% else %}
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('login_view') }}">Sign in</a>
+      <a class="btn-landing btn-landing-primary" href="{{ url_for('register_view') }}">Get started</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="landing-hero">
+    <p class="landing-kicker">Volunteer &middot; Earn &middot; Redeem</p>
+    <h1 class="landing-title">{% include 'partials/logo.html' %}<span class="brand-wordmark">Student Awards</span></h1>
+    <p class="landing-lead">
+      Every hour you serve counts. Submit your volunteer hours, get them verified,
+      and watch them grow into rewards, credits, and donations to causes you care about.
+    </p>
+    <div class="landing-cta">
+      {% if user_logged_in %}
+      <a class="btn-landing btn-landing-primary" href="{{ app_home }}">Continue to app</a>
+      {% else %}
+      <a class="btn-landing btn-landing-primary" href="{{ url_for('register_view') }}">Create account</a>
+      <a class="btn-landing btn-landing-ghost" href="{{ url_for('login_view') }}">Sign in</a>
+      {% endif %}
+    </div>
+
+    <ul class="landing-points">
+      <li class="landing-point">
+        <strong>Submit your hours</strong>
+        <span>Pick the cause you served, add the date and time, and attach your signed form.</span>
+      </li>
+      <li class="landing-point">
+        <strong>Get verified</strong>
+        <span>An admin reviews each submission so your total stays accurate and trusted.</span>
+      </li>
+      <li class="landing-point">
+        <strong>Redeem progress</strong>
+        <span>Trade verified hours for rewards, printing credit, or a charity donation.</span>
+      </li>
+    </ul>
+  </main>
+
+  <footer class="landing-foot">
+    Demo logins after <code>python manage.py init</code>: bob / bobpass &middot; admin / adminpass
+  </footer>
+</div>
+{% endblock %}

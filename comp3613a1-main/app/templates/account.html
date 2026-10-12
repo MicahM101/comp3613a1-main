@@ -1,0 +1,50 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Account{% endblock %}
+
+{% block subpage_content %}
+<div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+  <h1 class="h4 mb-0">Recent Cause Contributions</h1>
+  <a class="btn btn-primary" href="{{ url_for('submit_hours_form') }}">Submit Hours</a>
+</div>
+
+<div class="mb-3" style="max-width: 22rem;">
+  <label class="visually-hidden" for="causeSearch">Search causes</label>
+  <input class="form-control" type="search" id="causeSearch" placeholder="Search" autocomplete="off">
+</div>
+
+<div id="causeCards" class="row g-3">
+  {% for item in contributions %}
+  <div class="col-12 col-md-6 col-xl-4 cause-card" data-search="{{ item.cause.cause_name|lower }}">
+    <div class="card h-100 cause-card-inner">
+      <div class="card-body">
+        <h2 class="h6 card-title">{{ item.cause.cause_name }}</h2>
+        <p class="card-text small text-muted">{{ item.cause.description }}</p>
+        <p class="mb-0 fw-semibold">{{ item.hours_earned|int }} Hours Earned</p>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card cause-card-inner">
+      <div class="card-body text-muted">
+        No verified hours yet. Submit your first contribution and it will show
+        here once an admin verifies it.
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="mt-4 mb-0 fw-bold">Hours Earned: {{ total_hours|int }}</p>
+{% endblock %}
+
+{% block subpage_scripts %}
+<script>
+  document.getElementById("causeSearch").addEventListener("input", function (event) {
+    const query = event.target.value.trim().toLowerCase();
+    document.querySelectorAll(".cause-card").forEach(function (card) {
+      card.style.display = card.dataset.search.includes(query) ? "" : "none";
+    });
+  });
+</script>
+{% endblock %}
