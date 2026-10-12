@@ -18,11 +18,16 @@ async def user_home_view(
     user: AuthDep,
     db: SessionDep,
 ):
+    """Account page: cause cards, running total, and the submission tracker."""
+
     service = SubmissionService(
         SubmissionRepository(db),
         VolunteerCauseRepository(db),
         StudentRepository(db),
     )
+
+    # get_student_for also creates the profile on first sign-in, so it has to
+    # be the first call — the other three need a student id.
     student = service.get_student_for(user)
 
     return templates.TemplateResponse(
@@ -32,5 +37,6 @@ async def user_home_view(
             "user": user,
             "contributions": service.recent_contributions(student.id),
             "total_hours": service.total_hours_earned(student.id),
+            "submissions": service.my_submissions(student.id),
         },
     )

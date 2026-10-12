@@ -122,6 +122,56 @@
     form.was-validated .form-select:valid {
         border-color: #2f855a;
     }
+
+    /* Hour / minute picker — no meridiem inside; AM/PM is the radio pair */
+    .time-select {
+        width: 5.5rem;
+    }
+
+    .time-sep {
+        color: var(--brand-navy);
+        padding: 0 0.1rem;
+    }
+
+    /* Submission tracker */
+    .tracker-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--brand-muted);
+        border-bottom: 1px solid var(--brand-line);
+    }
+
+    .tracker-table td {
+        vertical-align: middle;
+    }
+
+    .state-badge {
+        display: inline-block;
+        padding: 0.2rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+
+    .state-pending {
+        background: color-mix(in srgb, var(--brand-accent) 20%, #fff);
+        color: #7a6112;
+        border: 1px solid color-mix(in srgb, var(--brand-accent) 45%, transparent);
+    }
+
+    .state-approved {
+        background: #dff3e4;
+        color: #1f6b3a;
+        border: 1px solid #a9dcb8;
+    }
+
+    .state-rejected {
+        background: #fbe1e3;
+        color: #9b2c34;
+        border: 1px solid #f0b3b8;
+    }
 </style>
 {% block additional_styles %}{% endblock %}
 {% endblock %}

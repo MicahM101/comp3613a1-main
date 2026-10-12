@@ -271,6 +271,35 @@ Model revisions from the Workflow 1 build:
 - SQLModel columns use snake_case (`student_id`, `hours_completed`, `date_completed`, `start_time`, `document_path`) — the code equivalents of the ERD's camelCase attributes. Diagram left as drawn.
 - Fixed on review: FK target typo `vollunteercause.id` → `volunteercause.id`; `default=None` removed from required non-optional fields; `start` → `start_time`; redirect now uses `request.url_for("user_home_view")` instead of a hardcoded (non-existent) `/app/account`.
 
+**Polish round 1 (student verify notes → applied):**
+
+1. Required fields marked with a red asterisk, an "fields marked * are required" note, native `required` blocking submit, plus inline "please fill this in" messages and green valid / red invalid borders.
+2. Native `type="time"` always shows its own AM/PM control on Windows, so the Start Time control is now a **hour + minute picker with no meridiem**, leaving the student's AM/PM radios as the only meridiem control. Route binds `time_hour` / `time_minute` and composes `start_time` as `HH:MM AM|PM`.
+3. **Submission tracker added to the Account page** (student chose a section over a new nav tab, keeping the wireframe's *Causes · Account · Rewards* bar). Table columns: Submission ID, Cause, Hours, State — with a coloured badge (gold pending / green approved / red rejected). New repository method `by_student` returns every submission regardless of state; service method `my_submissions` attaches the cause name.
+4. Dropped the red asterisk from the AM and PM labels — the Start Time label's asterisk covers the control, and both radios stay `required` in the markup.
+
+<!-- student-build:code-check
+workflow: SubmitHours
+form: snippet
+layer: repository
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: by_student returns every submission newest first with no state filter — correct
+-->
+
+<!-- student-build:code-check
+workflow: SubmitHours
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.75
+passed: partial
+note: thin route and correct context keys, but called four service methods that do not exist (get_student_by_user_id/get_contributions/get_total_hours/get_submissions); guided to the real names get_student_for/recent_contributions/total_hours_earned/my_submissions
+-->
+
+**Workflow 1 status:** student confirmed the submission state is viewable in the tracker and up to par. Workflow 1 closes pending their final visual check of the asterisk change.
+
 ## Deployed app
 
 Phase 6. Public Render URL (not localhost). Markers open this to mark the three workflows.

@@ -57,7 +57,11 @@ class SubmissionRepository:
         regardless of its state. The tracker shows pending, approved and
         rejected alike.
         """
-        ...
+        return self.session.exec(
+            select(Submission).where(
+                Submission.student_id == student_id
+            ).order_by(Submission.id.desc())
+        ).all()
 
     def all_recent(self) -> list[Submission]:
         """Newest first — the queue Workflow 2 reviews."""

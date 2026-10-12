@@ -48,13 +48,15 @@ async def submit_hours_preview(
     cause_id: int = Form(...),
     hours: float = Form(...),
     served_on: date = Form(...),
-    time_of_day: str = Form(...),
+    time_hour: str = Form(...),
+    time_minute: str = Form(...),
     meridiem: str = Form(...),
     document: UploadFile = File(...),
 ):
     """Validate + store the upload, then show the confirmation screen."""
     service = _service(db)
     cause = service.causes.get_by_id(cause_id)
+    start_time = f"{time_hour}:{time_minute} {meridiem}"
 
     if hours <= 0:
         flash(request, "Hours served must be more than zero.", "warning")
@@ -82,7 +84,7 @@ async def submit_hours_preview(
             "cause": cause,
             "hours": hours,
             "date_completed": served_on,
-            "start_time": f"{time_of_day} {meridiem}",
+            "start_time": start_time,
             "document_path": document_path,
             "document_name": document.filename or "document",
         },

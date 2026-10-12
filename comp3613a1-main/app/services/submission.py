@@ -62,6 +62,19 @@ class SubmissionService:
     def total_hours_earned(self, student_id: int) -> float:
         return sum(s.hours_completed or 0.0 for s in self.submissions.approved_by_student(student_id))
 
+    def my_submissions(self, student_id: int) -> list[dict]:
+        """The student's own tracker rows — every state, newest first."""
+        rows = []
+        for submission in self.submissions.by_student(student_id):
+            cause = self.causes.get_by_id(submission.cause_id)
+            rows.append(
+                {
+                    "submission": submission,
+                    "cause_name": cause.cause_name if cause else "—",
+                }
+            )
+        return rows
+
     def save_document(self, document: UploadFile) -> str:
         """Store the uploaded form and return its public path."""
         suffix = Path(document.filename or "document").suffix.lower()
