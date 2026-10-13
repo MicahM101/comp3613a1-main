@@ -31,3 +31,7 @@ class Submission(SQLModel, table=True):
     document_path: Optional[str] = None
     state: str = Field(default="pending")  # pending, approved, rejected
 
+    # Original file name as the student uploaded it — the admin's review card
+    # links the document by this name (document_path only holds the stored one).
+    original_document_name: Optional[str] = None
+

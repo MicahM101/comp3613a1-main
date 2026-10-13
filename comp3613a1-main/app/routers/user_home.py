@@ -18,7 +18,16 @@ async def user_home_view(
     user: AuthDep,
     db: SessionDep,
 ):
-    """Account page: cause cards, running total, and the submission tracker."""
+    """Account page: the student's hours dashboard, or the admin's profile."""
+
+    if user.role == "admin":
+        # An admin has no Student row and nothing to submit. The wireframe's
+        # Account tab still needs somewhere to land, so it shows the profile.
+        return templates.TemplateResponse(
+            request=request,
+            name="admin_account.html",
+            context={"user": user},
+        )
 
     service = SubmissionService(
         SubmissionRepository(db),

@@ -1,0 +1,56 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Confirm reward{% endblock %}
+
+{% block subpage_content %}
+<div class="card cause-card-inner mx-auto" style="max-width: 34rem;">
+  <div class="card-body p-4 text-center">
+    <h1 class="h5 mb-3">Are you sure?</h1>
+
+    {% if is_charity %}
+    <p class="text-muted mb-4">
+      Your selected hours will be converted to a donation, and therefore
+      subtracted from your account.
+    </p>
+    {% else %}
+    <p class="text-muted mb-4">
+      This reward will be redeemed for your selected hours, and therefore
+      subtracted from your account.
+    </p>
+    {% endif %}
+
+    <dl class="row text-start mx-auto mb-4" style="max-width: 24rem;">
+      <dt class="col-5 text-muted">Reward</dt>
+      <dd class="col-7">{{ reward.reward_name }}</dd>
+
+      <dt class="col-5 text-muted">Hours spent</dt>
+      <dd class="col-7">{{ hours|int }}</dd>
+
+      {% if charity %}
+      <dt class="col-5 text-muted">Partner charity</dt>
+      <dd class="col-7">{{ charity.charity_name }}</dd>
+      {% endif %}
+
+      <dt class="col-5 text-muted">Hours left after</dt>
+      <dd class="col-7">{{ (total - hours)|int }}</dd>
+    </dl>
+
+    <form method="POST" action="{{ url_for('reward_redeem_apply', reward_id=reward.id) }}">
+      <input type="hidden" name="hours" value="{{ hours }}">
+      {% if charity %}
+      <input type="hidden" name="charity_id" value="{{ charity.id }}">
+      {% endif %}
+
+      <div class="d-flex justify-content-center gap-3">
+        {% if is_charity %}
+        <a class="btn btn-outline-danger px-4"
+           href="{{ url_for('reward_redeem_start', reward_id=reward.id) }}">go back</a>
+        {% else %}
+        <a class="btn btn-outline-danger px-4"
+           href="{{ url_for('rewards_view') }}">go back</a>
+        {% endif %}
+        <button class="btn btn-primary px-4" type="submit">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

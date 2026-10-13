@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.dependencies.auth import AuthDep
 from app.dependencies.session import SessionDep
+from app.models.user import User
 from app.repositories.submission import (
     StudentRepository,
     SubmissionRepository,
@@ -23,12 +24,26 @@ def _service(db: SessionDep) -> SubmissionService:
     )
 
 
+def _student_only(request: Request, user: User) -> RedirectResponse | None:
+    """Hours belong to students — send an admin back to their own queue."""
+    if user.role == "admin":
+        flash(request, "Hours are submitted from a student account.", "warning")
+        return RedirectResponse(
+            url=request.url_for("admin_home_view"), status_code=303
+        )
+    return None
+
+
 @router.get("/app/hours/new", response_class=HTMLResponse)
 async def submit_hours_form(
     request: Request,
     user: AuthDep,
     db: SessionDep,
 ):
+    blocked = _student_only(request, user)
+    if blocked:
+        return blocked
+
     service = _service(db)
     return templates.TemplateResponse(
         request=request,
@@ -54,6 +69,10 @@ async def submit_hours_preview(
     document: UploadFile = File(...),
 ):
     """Validate + store the upload, then show the confirmation screen."""
+    blocked = _student_only(request, user)
+    if blocked:
+        return blocked
+
     service = _service(db)
     cause = service.causes.get_by_id(cause_id)
     start_time = f"{time_hour}:{time_minute} {meridiem}"
@@ -67,7 +86,7 @@ async def submit_hours_preview(
         )
 
     try:
-        document_path = service.save_document(document)
+        document_path, document_name = service.save_document(document)
     except ValueError as exc:
         flash(request, str(exc), "warning")
         return templates.TemplateResponse(
@@ -86,7 +105,7 @@ async def submit_hours_preview(
             "date_completed": served_on,
             "start_time": start_time,
             "document_path": document_path,
-            "document_name": document.filename or "document",
+            "document_name": document_name,
         },
     )
 
@@ -101,8 +120,12 @@ async def submit_hours_confirm(
     date_completed: date = Form(...),
     start_time: str = Form(...),
     document_path: str = Form(...),
+    document_name: str = Form(""),
 ):
     """Record the confirmed submission and return to the Account page."""
+    blocked = _student_only(request, user)
+    if blocked:
+        return blocked
 
     service = _service(db)
 
@@ -113,6 +136,7 @@ async def submit_hours_confirm(
         date_completed=date_completed,
         start_time=start_time,
         document_path=document_path,
+        original_document_name=document_name or None,
     )
 
     flash(request, "Your volunteer hours have been submitted successfully.", "success")

@@ -1,0 +1,84 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Review submission{% endblock %}
+
+{% block subpage_content %}
+<p class="mb-3">
+  <a href="{{ url_for('admin_home_view') }}">&larr; Back to submissions</a>
+</p>
+
+{% set submission = detail.submission %}
+{% set student = detail.student %}
+
+<div class="row g-4">
+  <div class="col-12 col-md-4">
+    <div class="card cause-card-inner review-card">
+      <div class="card-body text-center">
+        <span class="material-symbols-outlined review-avatar" aria-hidden="true">account_circle</span>        <p class="fw-bold mb-3 mt-2">ID: {{ student.id if student else '—' }}</p>
+        <p class="mb-0">{{ student.name if student else 'Unknown student' }}</p>
+        {% if student %}
+        <p class="text-muted small mb-0">{{ student.email }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-8">
+    <div class="card cause-card-inner">
+      <div class="card-body p-4">
+        <dl class="row mb-0">
+          <dt class="col-sm-4 text-muted">Cause Served:</dt>
+          <dd class="col-sm-8">{{ detail.cause_name }}</dd>
+
+          <dt class="col-sm-4 text-muted">Cause balance:</dt>
+          <dd class="col-sm-8">
+            {% if detail.cause and detail.cause.hours_available is not none %}
+            <span class="fw-semibold">{{ detail.cause.hours_available|int }} hours available</span>
+            {% if detail.cause.hours_available < submission.hours_completed %}
+            <span class="state-badge state-rejected ms-2">not enough &mdash; approve will be refused</span>
+            {% endif %}
+            {% else %}
+            <span class="text-muted">&mdash;</span>
+            {% endif %}
+          </dd>
+
+          <dt class="col-sm-4 text-muted">Hours Served:</dt>
+          <dd class="col-sm-8">{{ submission.hours_completed }}</dd>
+
+          <dt class="col-sm-4 text-muted">Date:</dt>
+          <dd class="col-sm-8">{{ submission.date_completed }}</dd>
+
+          <dt class="col-sm-4 text-muted">Start Time:</dt>
+          <dd class="col-sm-8">{{ submission.start_time or '—' }}</dd>
+
+          <dt class="col-sm-4 text-muted">Submitted:</dt>
+          <dd class="col-sm-8"><span class="state-badge state-{{ submission.state }}">{{ submission.state }}</span></dd>
+
+          <dt class="col-sm-4 text-muted">Student's total:</dt>
+          <dd class="col-sm-8 fw-semibold">{{ detail.total_hours|int }} hours earned</dd>
+
+          <dt class="col-sm-4 text-muted">Document:</dt>
+          <dd class="col-sm-8">
+            {% if submission.document_path %}
+            <a href="{{ submission.document_path }}" target="_blank" rel="noopener">
+              {{ submission.original_document_name or 'Open participation form' }}
+            </a>
+            <span class="text-muted small d-block">Opens in a new tab for review.</span>
+            {% else %}
+            <span class="text-muted">No document attached.</span>
+            {% endif %}
+          </dd>
+        </dl>
+
+        <hr>
+
+        <div class="d-flex justify-content-end gap-3">
+          <a class="btn btn-outline-danger px-4"
+             href="{{ url_for('submission_decision_confirm', submission_id=submission.id, state='rejected') }}">Reject</a>
+          <a class="btn btn-primary px-4"
+             href="{{ url_for('submission_decision_confirm', submission_id=submission.id, state='approved') }}">Approve</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -75,8 +75,8 @@ class SubmissionService:
             )
         return rows
 
-    def save_document(self, document: UploadFile) -> str:
-        """Store the uploaded form and return its public path."""
+    def save_document(self, document: UploadFile) -> tuple[str, str]:
+        """Store the upload; return (public path, original file name)."""
         suffix = Path(document.filename or "document").suffix.lower()
         if suffix not in ALLOWED_EXTENSIONS:
             raise ValueError(f"Unsupported file type '{suffix}'.")
@@ -84,7 +84,7 @@ class SubmissionService:
         target = UPLOAD_DIR / stored_name
         with target.open("wb") as handle:
             handle.write(document.file.read())
-        return f"/static/uploads/{stored_name}"
+        return f"/static/uploads/{stored_name}", Path(document.filename).name
 
     def record_submission(
         self,
@@ -95,6 +95,7 @@ class SubmissionService:
         date_completed,
         start_time: str,
         document_path: str,
+        original_document_name: str | None = None,
     ) -> Submission:
         """A new submission always starts life waiting on an admin."""
         student = self.get_student_for(user)
@@ -106,6 +107,7 @@ class SubmissionService:
             date_completed=date_completed,
             start_time=start_time,
             document_path=document_path,
+            original_document_name=original_document_name,
             state="pending",
         )
         return self.submissions.add(submission)

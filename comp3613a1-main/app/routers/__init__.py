@@ -19,6 +19,7 @@ from . import (
     login,
     register,
     admin_home,
+    admin_causes,
     user_home,
     submit_hours,
     causes,

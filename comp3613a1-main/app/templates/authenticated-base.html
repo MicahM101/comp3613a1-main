@@ -52,10 +52,11 @@
 
     .app-account {
         margin-left: auto;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--brand-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #a9b3bb;
         white-space: nowrap;
+        letter-spacing: 0.02em;
     }
 
     .app-tabs + .app-account {
@@ -172,6 +173,34 @@
         color: #9b2c34;
         border: 1px solid #f0b3b8;
     }
+
+    /* Admin Account profile card */
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.8rem;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: color-mix(in srgb, var(--brand-accent-2) 22%, #fff);
+        color: var(--brand-navy);
+        border: 1px solid color-mix(in srgb, var(--brand-accent-2) 55%, transparent);
+    }
+
+    /* Workflow 2 — review card */
+    .review-avatar {
+        font-size: 5rem;
+        color: var(--brand-accent-2);
+    }
+
+    .review-card .card-body {
+        padding: 1.75rem 1.25rem;
+    }
+
+    .review-card p {
+        margin-bottom: 0.35rem;
+    }
 </style>
 {% block additional_styles %}{% endblock %}
 {% endblock %}
@@ -186,7 +215,8 @@
     <nav class="app-tabs">
         {% if user.role == 'admin' %}
         <a class="app-tab {{ 'active' if request.url.path.startswith('/app') }}" href="{{ url_for('user_home_view') }}">Account</a>
-        <a class="app-tab {{ 'active' if request.url.path.startswith('/admin') }}" href="{{ url_for('admin_home_view') }}">Submissions</a>
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/admin') and not request.url.path.startswith('/admin/causes') }}" href="{{ url_for('admin_home_view') }}">Submissions</a>
+        <a class="app-tab {{ 'active' if request.url.path.startswith('/admin/causes') }}" href="{{ url_for('admin_causes_view') }}">Causes</a>
         {% else %}
         <a class="app-tab {{ 'active' if request.url.path.startswith('/causes') }}" href="{{ url_for('causes_view') }}">Causes</a>
         <a class="app-tab {{ 'active' if request.url.path.startswith('/app') }}" href="{{ url_for('user_home_view') }}">Account</a>

@@ -1,0 +1,54 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Causes{% endblock %}
+
+{% block subpage_content %}
+<h1 class="h4 mb-1">Causes</h1>
+<p class="text-muted mb-3">
+  Approved hours come off what a cause still has to give. Add hours to open it
+  back up for students.
+</p>
+
+<div class="card cause-card-inner">
+  <div class="table-responsive">
+    <table class="table tracker-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Cause</th>
+          <th scope="col">Description</th>
+          <th scope="col">Hours available</th>
+          <th scope="col" class="text-end">Add hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cause in causes %}
+        <tr>
+          <td class="fw-semibold">{{ cause.cause_name }}</td>
+          <td class="text-muted small">{{ cause.description }}</td>
+          <td>
+            <span class="fw-semibold">{{ cause.hours_available|int }} hours</span>
+            {% if cause.hours_available and cause.hours_available <= 10 %}
+            <span class="state-badge state-rejected ms-2">running low</span>
+            {% endif %}
+          </td>
+          <td>
+            <form class="d-flex gap-2 justify-content-end align-items-center"
+                  method="POST"
+                  action="{{ url_for('admin_cause_add_hours', cause_id=cause.id) }}">
+              <label class="visually-hidden" for="hours-{{ cause.id }}">Hours to add</label>
+              <input class="form-control form-control-sm" style="width: 7rem"
+                     type="number" id="hours-{{ cause.id }}" name="hours"
+                     min="1" step="1" placeholder="hours" required>
+              <button class="btn btn-sm btn-primary" type="submit">Add</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center text-muted py-4 mb-0">No causes have been added yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
 from app.models.student import Student
 from app.models.submission import Submission, VolunteerCause
@@ -12,6 +12,9 @@ class StudentRepository:
 
     def get_by_user_id(self, user_id: int) -> Optional[Student]:
         return self.session.exec(select(Student).where(Student.user_id == user_id)).first()
+
+    def get_by_id(self, student_id: int) -> Optional[Student]:
+        return self.session.get(Student, student_id)
 
     def create(self, student: Student) -> Student:
         self.session.add(student)
@@ -29,6 +32,21 @@ class VolunteerCauseRepository:
 
     def get_by_id(self, cause_id: int) -> Optional[VolunteerCause]:
         return self.session.get(VolunteerCause, cause_id)
+
+    def adjust_hours(self, cause_id: int, delta: float) -> Optional[VolunteerCause]:
+        """Move a cause's remaining hours by ``delta`` (negative spends them).
+
+        A cause never shows below zero — approvals that would overrun it stop
+        the balance at 0 rather than going into debt.
+        """
+        cause = self.session.get(VolunteerCause, cause_id)
+        if cause is None:
+            return None
+        cause.hours_available = max((cause.hours_available or 0.0) + delta, 0.0)
+        self.session.add(cause)
+        self.session.commit()
+        self.session.refresh(cause)
+        return cause
 
 
 class SubmissionRepository:
@@ -69,3 +87,39 @@ class SubmissionRepository:
 
     def get_by_id(self, submission_id: int) -> Optional[Submission]:
         return self.session.get(Submission, submission_id)
+
+    def pending_queue(self, search: str = "") -> list[Submission]:
+        """The admin's review queue: pending only, newest first.
+
+        Filtering runs here (student's choice) — one query across the joined
+        cause name plus the numeric ids, so the database does the work.
+        """
+        term = search.strip()
+        statement = (
+            select(Submission)
+            .join(VolunteerCause)
+            .where(Submission.state == "pending")
+            .order_by(Submission.id.desc())
+        )
+
+        if term:
+            conditions = [VolunteerCause.cause_name.ilike(f"%{term}%")]
+            if term.isdigit():
+                number = int(term)
+                conditions.append(Submission.student_id == number)
+                conditions.append(Submission.id == number)
+            statement = statement.where(or_(*conditions))
+
+        return self.session.exec(statement).all()
+
+    def decide(self, submission_id: int, admin_id: int, state: str) -> Optional[Submission]:
+        """Record the reviewing admin and the new state."""
+        submission = self.session.get(Submission, submission_id)
+        if submission is None:
+            return None
+        submission.admin_id = admin_id
+        submission.state = state
+        self.session.add(submission)
+        self.session.commit()
+        self.session.refresh(submission)
+        return submission

@@ -205,7 +205,7 @@ Branding preferences and how they were applied (landing / login / register).
 - **Authenticated shell:** tokens carried through — navy sidebar, gold active item, light-blue hover, Montserrat.
 - Bootstrap's default blue primary was overridden to gold with navy text for contrast.
 
-**Starter cleanup:** the FastStarter placeholder copy on landing/login/register was replaced with Student Awards brand and product copy. `/config` and auth were kept. The starter's demo user-table page was already removed in `app.js`; `app.html` / `admin.html` remain as empty shells that the three workflow screens replace (nav and layout follow the wireframes: top bar with **Causes · Account · Rewards**).
+**Starter cleanup:** the FastStarter placeholder copy on landing/login/register was replaced with Student Awards brand and product copy. `/config` and auth were kept. The starter's demo user-table page was already removed in `app.js`, and the two placeholder shells `app.html` / `admin.html` were deleted once the workflow screens replaced them (nav and layout follow the wireframes: top bar with **Causes · Account · Rewards**; the admin's top bar is **Account · Submissions**).
 
 ## Implementation notes
 
@@ -298,7 +298,112 @@ passed: partial
 note: thin route and correct context keys, but called four service methods that do not exist (get_student_by_user_id/get_contributions/get_total_hours/get_submissions); guided to the real names get_student_for/recent_contributions/total_hours_earned/my_submissions
 -->
 
-**Workflow 1 status:** student confirmed the submission state is viewable in the tracker and up to par. Workflow 1 closes pending their final visual check of the asterisk change.
+**Workflow 1 status:** closed. The student verified the tracker, the required-field marks, the hour/minute picker, and the AM/PM label change, and confirmed the screen is up to par before moving to Workflow 2.
+
+**Workflow 2 — VerifyHours (Admin):** scaffolded; the two student snippets are marked and waiting.
+
+Screens (built to `docs/wireframes/Workflow 2 - Verify Hours.png`):
+
+- **Queue (`/admin`, Submissions tab):** search box (*Search by Student ID, Submission ID or Cause*) over a *Recent Submission Requests* table — Submission ID, Cause, Student ID, Hours, Review.
+- **Review card (`/admin/submissions/{id}`):** student panel (avatar, ID, name, email) beside Cause Served, Hours Served, Date, Start Time, state badge, the student's running total, and the document link — then Reject / Approve.
+- **Decision confirm (`/admin/submissions/{id}/decision/{state}`):** "Approve student's Hours?" with the wireframe's *The student will be able to trade these hours for a reward.* copy, a summary of the row, and **go back** / **Approve**.
+
+Implementation decisions (student picks from Phase 5):
+
+- **Review identity:** the `Admin` profile is resolved from the signed-in login and `admin.id` is stored on the submission, so the ERD's "which admin verified it" is kept. The card shows the student's **internal database id** (the project has no `student_number` field).
+- **Search runs in the repository** (`SubmissionRepository.pending_queue`, `or_` / `ilike` across cause name and numeric ids) — the router only reads `request.query_params` and passes the string down.
+- **Total hours are computed**, never stored: `ReviewService.total_hours_for` sums the student's approved submissions for the card.
+- **Queue scope — student chose A: pending only.** The queue is a to-do list; a row leaves it as soon as it is decided, so only unreviewed requests are listed. Decided rows remain visible to the student in their own Account tracker.
+- **Queue seed:** `python manage.py init` now seeds a second student (carol), three pending rows across two students, one approved and one rejected row, plus a generated `Participation_Form_Signed.pdf` so the document link opens something real. Re-init is required because the schema gains a column.
+
+Student snippets for this workflow:
+
+- `app/models/submission.py` — **completed by the student:** `Submission` gains `original_document_name: Optional[str] = None`, the name the review card links the document by (the wireframe shows `Participation_Form_Signed.pdf`; `document_path` only holds the generated storage name). Optional, so existing rows stay valid. Service, template, and seeder were aligned to the student's field name.
+- `app/routers/admin_home.py` — **completed by the student:** `submission_decision_apply` builds `_review_service(db)`, calls `service.decide(submission_id=…, state=…, user=…)` inside `try/except ValueError`, flashes the service's message on rejection and a success message on acceptance, then redirects to the queue. **No SQL in the route.**
+
+Fix on review: the student's first attempt called `service.record_decision(submission_id, state, user.id)` — a method that does not exist — and raised `HTTPException(400)` instead of flashing. Guided to the real `ReviewService.decide` signature (keyword-only, takes the `User`, not `user.id`); the rewrite passes.
+
+<!-- student-build:code-check
+workflow: VerifyHours
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: student added optional original_document_name to Submission so the review card can link the file by its uploaded name; glue aligned to their field name
+-->
+
+<!-- student-build:code-check
+workflow: VerifyHours
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.80
+passed: partial
+note: thin route (builds service, calls it, redirects; no select/db.exec), but calls service.record_decision(submission_id, state, user.id) — a method that does not exist — and raises HTTPException instead of flashing; guided to the real service signature
+-->
+
+<!-- student-build:code-check
+workflow: VerifyHours
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: corrected to service.decide(submission_id=, state=, user=); try/except ValueError flashes the service message, success flash, redirect — thin route with no persistence logic
+-->
+
+**Workflow 2 verify:** the student ran the app and reported four mismatches against the wireframe (below). Both snippets were already integrated by that point, and the queue / search / review card / approve-reject loop ran end to end.
+
+**Polish round 2 (student verify notes → applied):**
+
+1. **"Submitting with empty required fields shows a code page."** The form tag carried `novalidate="false"` — HTML boolean attributes are true when *present*, so that attribute was silently switching native validation **off** and every empty submit fell through to FastAPI's raw `422` JSON. Attribute removed, so the required-field blocking from polish round 1 actually applies now.
+2. **"The document shown is not the document uploaded."** The seeder gave all five demo rows the *same* placeholder PDF, so every review card opened an identical file. `_sample_document` now takes a filename and body per row — each seeded submission gets its own `…-form.pdf` naming the student, cause, date, and hours. Real submissions were already correct: the card shows the student's own uploaded file name and path.
+3. **"I can submit hours as an admin."** `/app/hours/new` (GET + POST) and `/app/hours/confirm` now run a `_student_only` guard — an admin is flashed "Hours are submitted from a student account" and redirected to their queue instead of reaching the form.
+4. **"Grey out the Student/Admin Account badge."** `.app-account` muted to light grey, smaller size, medium weight — matching the wireframe, which draws *Admin Account* in light grey at the end of the top bar.
+5. **Admin Account tab — student chose A: a profile card.** The wireframe's *Account · Submissions* top bar keeps both tabs, so `/app` now branches on role: an admin gets `admin_account.html` (avatar, username, email, `Administrator` badge, link to Submissions) instead of the student dashboard. This also stops the old behaviour of creating a **Student** row for every admin who clicked Account. The hours form and tracker never render for an admin.
+6. **Cause list expanded (student request, moving into Workflow 3).** Seeded causes grew from 3 to 8: the original three plus **Beach Cleanup Drive**, **Community Food Bank**, **Library Reading Buddies**, **Blood Drive Volunteer**, and **Campus Open Day Guide**. `python manage.py seed` is additive, so it adds the new rows without touching existing submissions.
+
+**Cause availability (student's addition — Workflow 2 polish):**
+
+- **New rule (student's call):** approving a submission takes its hours off `volunteer_cause.hours_available`. Rejections and pending rows leave the balance alone. If the cause does **not** have enough hours left, the approval is **blocked**: `ReviewService.decide` raises before anything is written, the admin is flashed back to the queue with the shortfall ("DCIT Lab Assistants only has 15 hours left and this approval needs 20…"), and the review card shows the cause's balance with a warning so they can see it coming. Topping up on the Causes page clears it.
+- **Admin cause page:** new **Causes** tab at `/admin/causes` — every cause with its remaining hours and an inline *Add hours* form → `POST /admin/causes/{id}/hours` → `CauseService.add_hours` → `VolunteerCauseRepository.adjust_hours`.
+- Approvals are visible to students straight away: the Causes page already renders `hours_available` as "N hours available".
+- Thin routes throughout: the admin router binds the form and calls the service, which owns the validation (hours must be > 0, cause must exist).
+
+**Workflow 3 — RedeemProgress (Student):** scaffolded; the two student snippets are marked and waiting.
+
+Screens (built to `docs/wireframes/Workflow 3 - Redeem Progress.png`):
+
+- **Rewards grid (`/rewards`):** eight cards (name, hour cost or the conversion rate line), **Select** on affordable cards, a disabled *Needs N hours* button when not (student's choice A), and **Total Hours** persistent at the bottom left.
+- **Charity screen (`/rewards/{id}/redeem`, Charity Conversion only):** "How many hours would you like to convert to a Charity Donation?" with a −/+ stepper capped at *Max: N hours*, the partner-charity dropdown, and Cancel / Confirm.
+- **Confirmation (`/rewards/{id}/confirm`):** "Are you sure?" with the wireframe's donation copy, a summary (reward, hours, charity, hours left after), **go back** / **Confirm** → POST.
+
+Implementation decisions:
+
+- **Choice A — can't start:** the Select button is disabled on rewards the student cannot afford, and `RedeemService.start` refuses the same pick if someone reaches the URL directly.
+- **Only Charity Conversion asks for extra input** (Phase 4 note); every other Select goes straight to the confirmation dialog, and every redemption requires confirmation.
+- **Available hours are computed**: approved hours minus `hours_spent` — never stored (`RedeemService.available_hours`).
+- Charity screen is its **own page**, as the wireframe draws it; Cancel returns to the grid.
+- **Model revision:** `Reward.rate_note` (nullable) — the wireframe's conversion cards show a rate line ("1hr = $1", "1hr = 1 credit") that `reward_name` + `hour_cost` cannot express. Seeded values come straight from the cards.
+- **Seed:** the 8 wireframe rewards and the 4 partner charities (Red Cross, Habits for Humanity, United Way T&T, FEEL).
+
+Student snippets for this workflow (2 marked regions, awaiting completion):
+
+- `app/models/reward.py` — `HoursRedemption`: the composite primary key is scaffolded as the ERD draws it; the student adds the entity's other three attributes in snake_case.
+- `app/routers/rewards.py` — `reward_redeem_apply`: bind the form, ask the service to record the redemption, flash, redirect to the grid. **No SQL in the route.**
+
+
+
+<!-- student-build:code-check
+workflow: VerifyHours
+form: choice
+layer: router
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: student chose a profile card for the admin Account tab over dropping the tab or redirecting it to the queue
+-->
 
 ## Deployed app
 
@@ -311,6 +416,7 @@ https://
 Every account a marker needs, including extra users you added. Starter accounts:
 
 - bob / bobpass — regular user
+- carol / carolpass — regular user (second student, so the admin queue has two to search between)
 - admin / adminpass — admin
 
 ## YouTube URL

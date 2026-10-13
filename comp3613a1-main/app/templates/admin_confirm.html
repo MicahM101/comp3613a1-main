@@ -1,0 +1,55 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Confirm decision{% endblock %}
+
+{% block subpage_content %}
+{% set submission = detail.submission %}
+{% set student = detail.student %}
+
+<div class="card cause-card-inner mx-auto" style="max-width: 34rem;">
+  <div class="card-body p-4 text-center">
+    <h1 class="h5 mb-3">
+      {% if state == 'approved' %}
+      Approve student's Hours?
+      {% else %}
+      Reject student's Hours?
+      {% endif %}
+    </h1>
+
+    {% if state == 'approved' %}
+    <p class="text-muted mb-4">
+      The student will be able to trade these hours for a reward.
+    </p>
+    {% else %}
+    <p class="text-muted mb-4">
+      These hours will not be added to the student's total. They can submit
+      again with corrected details.
+    </p>
+    {% endif %}
+
+    <dl class="row text-start mx-auto mb-4" style="max-width: 24rem;">
+      <dt class="col-5 text-muted">Student</dt>
+      <dd class="col-7">{{ student.name if student else '—' }} (ID {{ student.id if student else '—' }})</dd>
+      <dt class="col-5 text-muted">Cause</dt>
+      <dd class="col-7">{{ detail.cause_name }}</dd>
+      <dt class="col-5 text-muted">Hours served</dt>
+      <dd class="col-7">{{ submission.hours_completed }}</dd>
+      <dt class="col-5 text-muted">Date</dt>
+      <dd class="col-7">{{ submission.date_completed }}</dd>
+      <dt class="col-5 text-muted">Start time</dt>
+      <dd class="col-7">{{ submission.start_time or '—' }}</dd>
+    </dl>
+
+    <form method="POST" action="{{ url_for('submission_decision_apply', submission_id=submission.id) }}">
+      <input type="hidden" name="state" value="{{ state }}">
+
+      <div class="d-flex justify-content-center gap-3">
+        <a class="btn btn-outline-danger px-4"
+           href="{{ url_for('submission_review_view', submission_id=submission.id) }}">go back</a>
+        <button class="btn btn-primary px-4" type="submit">
+          {{ 'Approve' if state == 'approved' else 'Reject' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

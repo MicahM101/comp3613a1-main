@@ -9,7 +9,7 @@
       Fields marked <span class="req-mark req-mark-inline"> *</span> are required.
     </p>
 
-    <form method="POST" action="{{ url_for('submit_hours_preview') }}" enctype="multipart/form-data" novalidate="false">
+    <form method="POST" action="{{ url_for('submit_hours_preview') }}" enctype="multipart/form-data">
       <div class="mb-4">
         <label class="form-label fw-semibold req-mark" for="cause_id">1) Choose the cause you served.</label>
         <select class="form-select" id="cause_id" name="cause_id" required>

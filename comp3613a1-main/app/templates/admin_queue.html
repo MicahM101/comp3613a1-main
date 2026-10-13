@@ -1,0 +1,64 @@
+{% extends "authenticated-base.html" %}
+{% block title %}Submissions{% endblock %}
+
+{% block subpage_content %}
+<div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+  <div>
+    <h1 class="h4 mb-0">Recent Submission Requests</h1>
+    <p class="text-muted small mb-0">Approve or reject the hours students have submitted.</p>
+  </div>
+</div>
+
+<form class="mb-4" method="GET" action="{{ url_for('admin_home_view') }}" role="search">
+  <label class="visually-hidden" for="queueSearch">Search submissions</label>
+  <input class="form-control" type="search" id="queueSearch" name="q" value="{{ search }}"
+         placeholder="Search by Student ID, Submission ID or Cause" autocomplete="off">
+</form>
+
+<div class="card cause-card-inner">
+  <div class="table-responsive">
+    <table class="table tracker-table mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Submission ID</th>
+          <th scope="col">Cause</th>
+          <th scope="col">Student ID</th>
+          <th scope="col">Hours</th>
+          <th scope="col" class="text-end">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set submission = row.submission %}
+        <tr>
+          <td>{{ '%04d'|format(submission.id) }}</td>
+          <td>{{ row.cause_name }}</td>
+          <td>{{ row.student.id if row.student else '—' }}</td>
+          <td>{{ submission.hours_completed }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-secondary"
+               href="{{ url_for('submission_review_view', submission_id=submission.id) }}">Review</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-muted text-center py-4 mb-0">
+            {% if search %}
+            Nothing matches "{{ search }}" — try a student ID, submission ID, or cause name.
+            {% else %}
+            No submissions are waiting for review. Nice work — the queue is clear.
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if search %}
+<p class="small mt-3 mb-0">
+  <a href="{{ url_for('admin_home_view') }}">Clear search</a> · {{ rows|length }} result{{ '' if rows|length == 1 else 's' }}
+</p>
+{% endif %}
+{% endblock %}

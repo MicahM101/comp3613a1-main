@@ -3,8 +3,39 @@
 
 {% block subpage_content %}
 <h1 class="h4 mb-1">Rewards</h1>
-<p class="text-muted mb-0">
-  The rewards grid arrives with the Redeem Progress workflow. Your verified hours
-  will be spendable here.
-</p>
+<p class="text-muted mb-3">Spend your verified hours on something back.</p>
+
+<div class="row g-3">
+  {% for row in rewards %}
+  {% set reward = row.reward %}
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="card h-100 cause-card-inner">
+      <div class="card-body text-center d-flex flex-column">
+        <h2 class="h6 card-title">{{ reward.reward_name }}</h2>
+        <p class="small text-muted mb-3">
+          {% if reward.rate_note %}{{ reward.rate_note }}{% else %}{{ reward.hour_cost|int }} hours{% endif %}
+        </p>
+
+        {% if row.affordable %}
+        <a class="btn btn-outline-secondary mt-auto"
+           href="{{ url_for('reward_redeem_start', reward_id=reward.id) }}">Select</a>
+        {% else %}
+        <button class="btn btn-outline-secondary mt-auto" type="button" disabled
+                title="Not enough verified hours yet">
+          Needs {{ reward.hour_cost|int }} hours
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="card cause-card-inner">
+      <div class="card-body text-muted">No rewards have been added yet.</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<p class="text-muted fw-semibold mt-4 mb-0">Total Hours: {{ total|int }}</p>
 {% endblock %}

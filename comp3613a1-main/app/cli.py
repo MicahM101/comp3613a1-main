@@ -54,6 +54,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
     """
     from app.database import ensure_db_and_tables, get_cli_session
     from app.models.admin import Admin
+    from app.models.reward import Charity, Reward
     from app.models.student import Student
     from app.models.submission import VolunteerCause
     from app.models.user import User
@@ -67,6 +68,7 @@ def cmd_seed(args: argparse.Namespace) -> None:
 
     demo_users = [
         ("bob", "bob@example.com", "bobpass", "regular_user"),
+        ("carol", "carol@example.com", "carolpass", "regular_user"),
         ("admin", "admin@example.com", "adminpass", "admin"),
     ]
 
@@ -74,6 +76,8 @@ def cmd_seed(args: argparse.Namespace) -> None:
     skipped = 0
     seeded_profiles = 0
     seeded_causes = 0
+    seeded_rewards = 0
+    seeded_charities = 0
     with get_cli_session() as session:
         repo = UserRepository(session)
         for username, email, password, role in demo_users:
@@ -108,9 +112,16 @@ def cmd_seed(args: argparse.Namespace) -> None:
                     seeded_profiles += 1
 
         demo_causes = [
-            ("Save the Turtles!", "Please help the beach club clean the turtle nest at the city beach!", 40.0),
+            # Balances already reflect the hours seeded as approved on them;
+            # in-app approvals subtract via ReviewService.decide.
+            ("Save the Turtles!", "Please help the beach club clean the turtle nest at the city beach!", 35.0),
             ("Math Help Center", "The math help center is looking for volunteers with math skills to give back to struggling students.", 30.0),
-            ("DCIT Lab Assistants", "Students may use free time to be DCIT Lab Assistants for DCIT computer labs.", 60.0),
+            ("DCIT Lab Assistants", "Students may use free time to be DCIT Lab Assistants for DCIT computer labs.", 15.0),
+            ("Beach Cleanup Drive", "Help clear litter along the coastline and record what is collected for the coastal conservation unit.", 35.0),
+            ("Community Food Bank", "Sort, pack, and hand out grocery parcels to families referred by the social welfare office.", 45.0),
+            ("Library Reading Buddies", "Spend an afternoon helping primary school students practise their reading at the public library.", 30.0),
+            ("Blood Drive Volunteer", "Guide donors, restock refreshments, and keep the queue calm during the campus blood drive.", 20.0),
+            ("Campus Open Day Guide", "Walk prospective students and their parents around campus and answer questions on open day.", 25.0),
         ]
         for cause_name, description, hours_available in demo_causes:
             existing = session.exec(
@@ -127,13 +138,162 @@ def cmd_seed(args: argparse.Namespace) -> None:
             )
             seeded_causes += 1
 
+        # The eight reward cards and the partner-charity dropdown, as drawn
+        # on the Workflow 3 wireframe. Conversion cards carry a rate note.
+        demo_rewards = [
+            ("LinkedIn Profile Workshop", 5.0, None),
+            ("25% off Rituals Discount", 50.0, None),
+            ("Ying Bredda Concert Ticket", 100.0, None),
+            ("Charity Conversion", 1.0, "1hr = $1"),
+            ("Printing Credit Conversion", 1.0, "1hr = 1 credit"),
+            ("Become volunteer Leader. (Student reference)", 100.0, None),
+            ("$10 Stationery Store Voucher", 25.0, None),
+            ("School Branded Hoodie", 100.0, None),
+        ]
+        for reward_name, hour_cost, rate_note in demo_rewards:
+            if session.exec(
+                select(Reward).where(Reward.reward_name == reward_name)
+            ).first():
+                continue
+            session.add(
+                Reward(reward_name=reward_name, hour_cost=hour_cost, rate_note=rate_note)
+            )
+            seeded_rewards += 1
+
+        demo_charities = ["Red Cross", "Habits for Humanity", "United Way T&T", "FEEL"]
+        for charity_name in demo_charities:
+            if session.exec(
+                select(Charity).where(Charity.charity_name == charity_name)
+            ).first():
+                continue
+            session.add(Charity(charity_name=charity_name))
+            seeded_charities += 1
+
+        seeded_submissions = _seed_submissions(session)
         session.commit()
 
     print(
         f"Seed done — created {created}, skipped {skipped}, "
-        f"profiles {seeded_profiles}, causes {seeded_causes}."
+        f"profiles {seeded_profiles}, causes {seeded_causes}, "
+        f"rewards {seeded_rewards}, charities {seeded_charities}, "
+        f"submissions {seeded_submissions}."
     )
-    print("Login with bob/bobpass or admin/adminpass")
+    print("Login with bob/bobpass, carol/carolpass or admin/adminpass")
+
+
+def _sample_document(filename: str, lines: tuple[str, ...]) -> str:
+    """Write (once) a small participation form the review card can open.
+
+    Each seeded row gets its own file, so the admin's review card links a
+    document that matches the row instead of one shared placeholder.
+    """
+    from app.services.submission import UPLOAD_DIR
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    target = UPLOAD_DIR / filename
+    if target.exists():
+        return f"/static/uploads/{target.name}"
+
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(text="Signed Participation Form")
+    pdf.ln(12)
+    pdf.set_font("Helvetica", size=11)
+    for line in lines:
+        if line:
+            pdf.cell(text=line)
+        pdf.ln(9)
+    pdf.output(str(target))
+    return f"/static/uploads/{target.name}"
+
+
+def _seed_submissions(session) -> int:
+    """Queue rows for Workflow 2, so the admin screen is never an empty table."""
+    from datetime import date
+
+    from sqlmodel import select
+
+    from app.models.student import Student
+    from app.models.submission import Submission, VolunteerCause
+    from app.models.user import User
+
+    if session.exec(select(Submission)).first():
+        return 0  # already seeded (or the student has submitted for real)
+
+    def _student(username: str) -> Student | None:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if user is None:
+            return None
+        return session.exec(select(Student).where(Student.user_id == user.id)).first()
+
+    def _cause(name: str) -> VolunteerCause | None:
+        return session.exec(
+            select(VolunteerCause).where(VolunteerCause.cause_name == name)
+        ).first()
+
+    rows = [
+        # (student, cause, hours, state, admin, day, start_time)
+        # bob starts on 50 verified hours, matching the wireframe's Total Hours.
+        ("bob", "Save the Turtles!", 5.0, "approved", "admin", date(2026, 9, 28), "09:00 AM"),
+        ("bob", "DCIT Lab Assistants", 45.0, "approved", "admin", date(2026, 10, 7), "11:15 AM"),
+        ("bob", "Math Help Center", 3.0, "pending", None, date(2026, 10, 5), "02:30 PM"),
+        ("carol", "Save the Turtles!", 6.0, "pending", None, date(2026, 10, 6), "08:45 AM"),
+        ("carol", "DCIT Lab Assistants", 5.0, "pending", None, date(2026, 10, 8), "10:00 AM"),
+        ("carol", "Math Help Center", 2.0, "rejected", "admin", date(2026, 9, 30), "04:00 PM"),
+    ]
+
+    seeded = 0
+    for username, cause_name, hours, state, reviewer, day, start_time in rows:
+        student = _student(username)
+        cause = _cause(cause_name)
+        if student is None or cause is None:
+            continue
+
+        admin_id = None
+        if reviewer:
+            reviewer_user = session.exec(
+                select(User).where(User.username == reviewer)
+            ).first()
+            if reviewer_user:
+                from app.models.admin import Admin
+
+                admin_profile = session.exec(
+                    select(Admin).where(Admin.user_id == reviewer_user.id)
+                ).first()
+                admin_id = admin_profile.id if admin_profile else None
+
+        slug = "".join(ch if ch.isalnum() else "-" for ch in cause_name).strip("-")
+        document_name = f"{username}-{slug}-form.pdf"
+        document_path = _sample_document(
+            document_name,
+            (
+                f"Served by: {username}",
+                f"Cause: {cause_name}",
+                f"Date: {day.isoformat()}    Hours: {hours:g}",
+                "",
+                "Signature: ______________________   Date: ____________",
+            ),
+        )
+
+        session.add(
+            Submission(
+                student_id=student.id,
+                admin_id=admin_id,
+                cause_id=cause.id,
+                hours_completed=hours,
+                date_completed=day,
+                start_time=start_time,
+                document_path=document_path,
+                original_document_name=document_name,
+                state=state,
+            )
+        )
+        seeded += 1
+
+    return seeded
 
 
 def cmd_run(args: argparse.Namespace) -> None:
