@@ -5,6 +5,17 @@
 <h1 class="h4 mb-1">Causes</h1>
 <p class="text-muted mb-3">Volunteer causes you can serve. Submit hours for the ones you help with.</p>
 
+<form class="d-flex gap-2 mb-3 list-search" method="GET"
+      action="{{ url_for('causes_view') }}" role="search">
+  <label class="visually-hidden" for="cause-search">Search causes</label>
+  <input class="form-control" type="search" id="cause-search" name="q"
+         placeholder="Search causes by name or description" value="{{ search }}">
+  <button class="btn btn-primary" type="submit">Search</button>
+  {% if search %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('causes_view') }}">Clear</a>
+  {% endif %}
+</form>
+
 <div class="row g-3">
   {% for cause in causes %}
   <div class="col-12 col-md-6 col-xl-4">
@@ -21,7 +32,9 @@
   {% else %}
   <div class="col-12">
     <div class="card cause-card-inner">
-      <div class="card-body text-muted">No causes have been added yet.</div>
+      <div class="card-body text-muted">
+        {% if search %}No causes match &ldquo;{{ search }}&rdquo;.{% else %}No causes have been added yet.{% endif %}
+      </div>
     </div>
   </div>
   {% endfor %}

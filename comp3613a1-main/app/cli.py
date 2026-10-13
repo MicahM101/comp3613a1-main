@@ -138,17 +138,24 @@ def cmd_seed(args: argparse.Namespace) -> None:
             )
             seeded_causes += 1
 
-        # The eight reward cards and the partner-charity dropdown, as drawn
-        # on the Workflow 3 wireframe. Conversion cards carry a rate note.
+        # The reward cards and the partner-charity dropdown, as drawn on the
+        # Workflow 3 wireframe plus the extras the student asked for in
+        # polish. Conversion cards carry a rate note.
         demo_rewards = [
             ("LinkedIn Profile Workshop", 5.0, None),
             ("25% off Rituals Discount", 50.0, None),
-            ("Ying Bredda Concert Ticket", 100.0, None),
+            ("Yung Bredda Concert Ticket", 100.0, None),
             ("Charity Conversion", 1.0, "1hr = $1"),
             ("Printing Credit Conversion", 1.0, "1hr = 1 credit"),
             ("Become volunteer Leader. (Student reference)", 100.0, None),
             ("$10 Stationery Store Voucher", 25.0, None),
             ("School Branded Hoodie", 100.0, None),
+            ("Campus Cafe Meal Voucher", 10.0, None),
+            ("Library Late-Fee Waiver", 5.0, None),
+            ("Gym Day Pass", 8.0, None),
+            ("Movie Night Ticket", 12.0, None),
+            ("Career Fair Fast-Track Entry", 15.0, None),
+            ("One-Month Parking Permit", 40.0, None),
         ]
         for reward_name, hour_cost, rate_note in demo_rewards:
             if session.exec(

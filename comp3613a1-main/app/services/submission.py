@@ -86,6 +86,25 @@ class SubmissionService:
             handle.write(document.file.read())
         return f"/static/uploads/{stored_name}", Path(document.filename).name
 
+    def check_hours_fit(self, *, cause_id: int, hours: float) -> VolunteerCause:
+        """A submission cannot claim more hours than the cause still offers.
+
+        Approvals are what actually spend a cause's hours (ReviewService.decide),
+        so this checks the balance as it stands now — the same number the
+        Causes page shows the student.
+        """
+        cause = self.causes.get_by_id(cause_id)
+        if cause is None:
+            raise ValueError("That cause no longer exists.")
+
+        available = cause.hours_available or 0.0
+        if hours > available:
+            raise ValueError(
+                "Your hours exceed the total available for this cause — "
+                f"{cause.cause_name} has {available:g} hours."
+            )
+        return cause
+
     def record_submission(
         self,
         *,
@@ -98,6 +117,7 @@ class SubmissionService:
         original_document_name: str | None = None,
     ) -> Submission:
         """A new submission always starts life waiting on an admin."""
+        self.check_hours_fit(cause_id=cause_id, hours=hours)
         student = self.get_student_for(user)
         submission = Submission(
             student_id=student.id,

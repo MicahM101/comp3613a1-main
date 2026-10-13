@@ -74,7 +74,6 @@ async def submit_hours_preview(
         return blocked
 
     service = _service(db)
-    cause = service.causes.get_by_id(cause_id)
     start_time = f"{time_hour}:{time_minute} {meridiem}"
 
     if hours <= 0:
@@ -86,6 +85,7 @@ async def submit_hours_preview(
         )
 
     try:
+        cause = service.check_hours_fit(cause_id=cause_id, hours=hours)
         document_path, document_name = service.save_document(document)
     except ValueError as exc:
         flash(request, str(exc), "warning")
@@ -129,15 +129,21 @@ async def submit_hours_confirm(
 
     service = _service(db)
 
-    service.record_submission(
-        user=user,
-        cause_id=cause_id,
-        hours=hours,
-        date_completed=date_completed,
-        start_time=start_time,
-        document_path=document_path,
-        original_document_name=document_name or None,
-    )
+    try:
+        service.record_submission(
+            user=user,
+            cause_id=cause_id,
+            hours=hours,
+            date_completed=date_completed,
+            start_time=start_time,
+            document_path=document_path,
+            original_document_name=document_name or None,
+        )
+    except ValueError as exc:
+        flash(request, str(exc), "warning")
+        return RedirectResponse(
+            url=request.url_for("submit_hours_form"), status_code=303
+        )
 
     flash(request, "Your volunteer hours have been submitted successfully.", "success")
 

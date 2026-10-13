@@ -30,6 +30,7 @@ async def rewards_view(
     request: Request,
     user: AuthDep,
     db: SessionDep,
+    q: str = Query(""),
 ):
     """Workflow 3 — the rewards grid and the student's running total."""
     service = _redeem_service(db)
@@ -37,7 +38,7 @@ async def rewards_view(
     return templates.TemplateResponse(
         request=request,
         name="rewards.html",
-        context={"user": user, **service.grid(user)},
+        context={"user": user, **service.grid(user, search=q)},
     )
 
 
@@ -124,14 +125,25 @@ async def reward_redeem_apply(
     hours: float | None = Form(None),
     charity_id: int | None = Form(None),
 ):
-    """TODO(student): complete this handler.
+    """Record a confirmed redemption and send the student back to the grid.
 
-    Keep the route thin: build the redeem service, ask it to record this
-    redemption for the signed-in student, then send the browser back to the
-    Rewards grid with a confirmation message.
-
-    The service owns every check (unknown reward, already redeemed, not
-    enough hours, missing charity) — it raises ValueError for those, so catch
-    it and flash the message instead of letting the request fail.
+    The service owns every check (unknown reward, not enough hours, missing
+    charity) — it raises ValueError for those, so catch it and flash the
+    message instead of letting the request fail.
     """
-    ...
+    service = _redeem_service(db)
+
+    try:
+        service.redeem(
+            reward_id=reward_id,
+            user=user,
+            hours=hours,
+            charity_id=charity_id,
+        )
+    except ValueError as exc:
+        flash(request, str(exc), "warning")
+        return RedirectResponse(url=request.url_for("rewards_view"), status_code=303)
+
+    flash(request, "Redemption successful!", "success")
+    return RedirectResponse(url=request.url_for("rewards_view"), status_code=303)
+

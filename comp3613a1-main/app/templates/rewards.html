@@ -5,22 +5,35 @@
 <h1 class="h4 mb-1">Rewards</h1>
 <p class="text-muted mb-3">Spend your verified hours on something back.</p>
 
+<form class="d-flex gap-2 mb-3 list-search" method="GET"
+      action="{{ url_for('rewards_view') }}" role="search">
+  <label class="visually-hidden" for="reward-search">Search rewards</label>
+  <input class="form-control" type="search" id="reward-search" name="q"
+         placeholder="Search rewards by name" value="{{ search }}">
+  <button class="btn btn-primary" type="submit">Search</button>
+  {% if search %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('rewards_view') }}">Clear</a>
+  {% endif %}
+</form>
+
 <div class="row g-3">
   {% for row in rewards %}
   {% set reward = row.reward %}
   <div class="col-12 col-sm-6 col-xl-3">
-    <div class="card h-100 cause-card-inner">
+    <div class="card reward-tile h-100">
       <div class="card-body text-center d-flex flex-column">
+        <span class="material-symbols-outlined reward-icon" aria-hidden="true">redeem</span>
+
         <h2 class="h6 card-title">{{ reward.reward_name }}</h2>
-        <p class="small text-muted mb-3">
+        <p class="small reward-cost fw-semibold mb-3">
           {% if reward.rate_note %}{{ reward.rate_note }}{% else %}{{ reward.hour_cost|int }} hours{% endif %}
         </p>
 
         {% if row.affordable %}
-        <a class="btn btn-outline-secondary mt-auto"
+        <a class="btn btn-select mt-auto"
            href="{{ url_for('reward_redeem_start', reward_id=reward.id) }}">Select</a>
         {% else %}
-        <button class="btn btn-outline-secondary mt-auto" type="button" disabled
+        <button class="btn btn-select-disabled mt-auto" type="button" disabled
                 title="Not enough verified hours yet">
           Needs {{ reward.hour_cost|int }} hours
         </button>
@@ -31,7 +44,9 @@
   {% else %}
   <div class="col-12">
     <div class="card cause-card-inner">
-      <div class="card-body text-muted">No rewards have been added yet.</div>
+      <div class="card-body text-muted">
+        {% if search %}No rewards match &ldquo;{{ search }}&rdquo;.{% else %}No rewards have been added yet.{% endif %}
+      </div>
     </div>
   </div>
   {% endfor %}

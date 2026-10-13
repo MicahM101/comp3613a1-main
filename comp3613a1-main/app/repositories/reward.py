@@ -9,9 +9,13 @@ class RewardRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def list_all(self) -> list[Reward]:
-        """Cheapest first, so the grid reads in a sensible order."""
-        return self.session.exec(select(Reward).order_by(Reward.hour_cost)).all()
+    def list_all(self, search: str = "") -> list[Reward]:
+        """Cheapest first, optionally narrowed by name."""
+        term = search.strip()
+        statement = select(Reward).order_by(Reward.hour_cost)
+        if term:
+            statement = statement.where(Reward.reward_name.ilike(f"%{term}%"))
+        return self.session.exec(statement).all()
 
     def get_by_id(self, reward_id: int) -> Optional[Reward]:
         return self.session.get(Reward, reward_id)
@@ -46,7 +50,3 @@ class HoursRedemptionRepository:
     def total_spent(self, student_id: int) -> float:
         """Hours already converted into rewards or donations."""
         return sum(redemption.hours_spent or 0.0 for redemption in self.by_student(student_id))
-
-    def get(self, student_id: int, reward_id: int) -> Optional[HoursRedemption]:
-        """Composite key: (student, reward) is one row in the ERD."""
-        return self.session.get(HoursRedemption, (student_id, reward_id))

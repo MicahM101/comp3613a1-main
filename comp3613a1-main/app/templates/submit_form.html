@@ -15,7 +15,9 @@
         <select class="form-select" id="cause_id" name="cause_id" required>
           <option value="" selected disabled>- Select Cause -</option>
           {% for cause in causes %}
-          <option value="{{ cause.id }}">{{ cause.cause_name }}</option>
+          <option value="{{ cause.id }}"
+                  data-name="{{ cause.cause_name }}"
+                  data-hours="{{ cause.hours_available|int if cause.hours_available else 0 }}">{{ cause.cause_name }}</option>
           {% endfor %}
         </select>
         <div class="invalid-feedback">Please choose the cause you served.</div>
@@ -24,7 +26,8 @@
       <div class="mb-4">
         <label class="form-label fw-semibold req-mark" for="hours">2) Enter hours served.</label>
         <input class="form-control" type="number" id="hours" name="hours" min="0.5" step="0.5" placeholder="e.g. 5" required>
-        <div class="invalid-feedback">Please enter the hours you served.</div>
+        <div class="invalid-feedback" id="hours_feedback">Please enter the hours you served.</div>
+        <small class="text-muted" id="hours_hint"></small>
       </div>
 
       <div class="mb-4">
@@ -95,5 +98,47 @@
       hoursForm.classList.add("was-validated");
     });
   }
+
+  // Field 2 can never claim more hours than the chosen cause still has.
+  // Same native validation bubble a missing field gets, with the cause named.
+  const causeSelect = document.getElementById("cause_id");
+  const hoursInput = document.getElementById("hours");
+  const hoursFeedback = document.getElementById("hours_feedback");
+  const hoursHint = document.getElementById("hours_hint");
+  const defaultHoursMessage = hoursFeedback ? hoursFeedback.textContent.trim() : "";
+
+  function chosenCause() {
+    if (!causeSelect) return { name: "this cause", hours: 0 };
+    const option = causeSelect.options[causeSelect.selectedIndex];
+    return {
+      name: option && option.dataset.name ? option.dataset.name : "this cause",
+      hours: option && option.dataset.hours ? Number(option.dataset.hours) : 0,
+    };
+  }
+
+  function checkHoursAgainstCause() {
+    if (!hoursInput) return;
+    const cause = chosenCause();
+    const typed = Number(hoursInput.value);
+
+    hoursInput.max = String(cause.hours);
+    if (hoursHint) {
+      hoursHint.textContent = cause.hours + " hours available for " + cause.name + ".";
+    }
+
+    if (hoursInput.value !== "" && typed > cause.hours) {
+      const message =
+        "Your hours exceed the total available for this cause — " +
+        cause.name + " has " + cause.hours + " hours.";
+      hoursInput.setCustomValidity(message);
+      if (hoursFeedback) hoursFeedback.textContent = message;
+    } else {
+      hoursInput.setCustomValidity("");
+      if (hoursFeedback) hoursFeedback.textContent = defaultHoursMessage;
+    }
+  }
+
+  if (causeSelect) causeSelect.addEventListener("change", checkHoursAgainstCause);
+  if (hoursInput) hoursInput.addEventListener("input", checkHoursAgainstCause);
 </script>
 {% endblock %}

@@ -27,8 +27,18 @@ class VolunteerCauseRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def list_all(self) -> list[VolunteerCause]:
-        return self.session.exec(select(VolunteerCause).order_by(VolunteerCause.cause_name)).all()
+    def list_all(self, search: str = "") -> list[VolunteerCause]:
+        """Every cause, optionally narrowed by name or description."""
+        term = search.strip()
+        statement = select(VolunteerCause).order_by(VolunteerCause.cause_name)
+        if term:
+            statement = statement.where(
+                or_(
+                    VolunteerCause.cause_name.ilike(f"%{term}%"),
+                    VolunteerCause.description.ilike(f"%{term}%"),
+                )
+            )
+        return self.session.exec(statement).all()
 
     def get_by_id(self, cause_id: int) -> Optional[VolunteerCause]:
         return self.session.get(VolunteerCause, cause_id)

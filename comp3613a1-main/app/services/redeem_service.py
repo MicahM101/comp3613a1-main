@@ -46,7 +46,7 @@ class RedeemService:
 
     # --- the grid ------------------------------------------------------------
 
-    def grid(self, user: User) -> dict:
+    def grid(self, user: User, search: str = "") -> dict:
         """Reward cards plus the affordability flag the wireframe's Select needs."""
         total = self.available_hours(user)
         rows = [
@@ -55,9 +55,9 @@ class RedeemService:
                 "affordable": reward.hour_cost <= total,
                 "needs": max(reward.hour_cost - total, 0.0),
             }
-            for reward in self.rewards.list_all()
+            for reward in self.rewards.list_all(search)
         ]
-        return {"rewards": rows, "total": total}
+        return {"rewards": rows, "total": total, "search": search}
 
     # --- picking one ----------------------------------------------------------
 
@@ -130,10 +130,6 @@ class RedeemService:
         quote = self.confirm(
             reward_id=reward_id, user=user, hours=hours, charity_id=charity_id
         )
-
-        # The ERD's composite key allows one redemption per student per reward.
-        if self.redemptions.get(student.id, reward_id) is not None:
-            raise ValueError("You have already redeemed this reward.")
 
         charity = quote["charity"]
         return self.redemptions.add(

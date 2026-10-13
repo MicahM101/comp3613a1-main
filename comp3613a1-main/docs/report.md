@@ -79,8 +79,9 @@ erDiagram
     string charityName
   }
   HOURS_REDEMPTION {
-    int studentId PK, FK
-    int rewardId PK, FK
+    int redemptionId PK
+    int studentId FK
+    int rewardId FK
     int charityId FK
     date dateRedeemed
     float hoursSpent
@@ -89,7 +90,7 @@ erDiagram
 
 Notes:
 - Submission holds FKs to Student, Admin, and Volunteer Cause; `state` tracks pending/verified/rejected.
-- HoursRedemption is the many-to-many bridge between Student and Reward (composite PK studentId+rewardId).
+- HoursRedemption is the many-to-many bridge between Student and Reward. The ERD drew it with a composite PK (studentId+rewardId — one redemption per student per reward); **Phase 5 revision (student's call):** repeat redemptions are wanted (a second donation, a second voucher), so the table carries its own `redemptionId` PK instead. `Student.totalHours` sums `hoursSpent` across every row.
 - Student.totalHours is **computed** (verified submission hours minus hoursSpent in HoursRedemption), not stored.
 - Admin verifies many submissions; a submission is verified by at most one admin (adminId nullable until verified).
 - Many submissions can reference one Volunteer Cause (FK causeId on Submission).
@@ -388,10 +389,61 @@ Implementation decisions:
 - **Model revision:** `Reward.rate_note` (nullable) — the wireframe's conversion cards show a rate line ("1hr = $1", "1hr = 1 credit") that `reward_name` + `hour_cost` cannot express. Seeded values come straight from the cards.
 - **Seed:** the 8 wireframe rewards and the 4 partner charities (Red Cross, Habits for Humanity, United Way T&T, FEEL).
 
-Student snippets for this workflow (2 marked regions, awaiting completion):
+Student snippets for this workflow (2 marked regions, completed by the student):
 
-- `app/models/reward.py` — `HoursRedemption`: the composite primary key is scaffolded as the ERD draws it; the student adds the entity's other three attributes in snake_case.
-- `app/routers/rewards.py` — `reward_redeem_apply`: bind the form, ask the service to record the redemption, flash, redirect to the grid. **No SQL in the route.**
+- `app/models/reward.py` — **completed by the student:** `HoursRedemption` gains `charity_id: Optional[int]` (nullable FK to Charity — only charity conversions set it), `date_redeemed: date` with a `default_factory=date.today`, and `hours_spent: float`. All three are the ERD's remaining attributes in snake_case, matching what the redeem service sets.
+- `app/routers/rewards.py` — **completed by the student:** `reward_redeem_apply` builds `_redeem_service(db)`, calls `service.redeem(reward_id=…, user=…, hours=…, charity_id=…)` inside `try/except ValueError`, flashes the service's message and redirects to the grid. **No SQL in the route.**
+
+Fix on review: the student's first attempt fell off the end on success — no flash, no redirect — so a successful redemption returned `None` and the request failed. Corrected on their next pass: success now flashes "Redemption successful!" and redirects to the grid, mirroring the error branch. Both snippets are now clean.
+
+<!-- student-build:code-check
+workflow: RedeemProgress
+form: snippet
+layer: model
+architecture_ok: yes
+implement_confidence: 0.85
+passed: yes
+note: student added charity_id (nullable FK to Charity), date_redeemed (default_factory=date.today) and hours_spent to HoursRedemption — the ERD's remaining attributes in snake_case, aligned with what the redeem service sets
+-->
+
+<!-- student-build:code-check
+workflow: RedeemProgress
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.85
+passed: partial
+note: thin route — builds the service, calls redeem(), try/except ValueError flashes and redirects; no select/db.exec. Missing the success return, so a successful POST returns None; guided to add the happy-path flash + redirect
+-->
+
+<!-- student-build:code-check
+workflow: RedeemProgress
+form: snippet
+layer: router
+architecture_ok: yes
+implement_confidence: 0.90
+passed: yes
+note: corrected — success now flashes "Redemption successful!" and redirects to the grid; try/except ValueError covers every refusal the service raises; thin route with no persistence logic
+-->
+
+**Model revision applied (Phase 5, student's call — repeat redemptions):** the ERD's composite key would have refused a second Charity Conversion with "already redeemed". `HoursRedemption` now carries its own `id` PK (their three fields unchanged), the composite lookup `HoursRedemptionRepository.get` is gone, and `RedeemService.redeem` no longer refuses a repeat. `available_hours` is unaffected — it sums `hours_spent` across every redemption row.
+
+**Workflow 3 verify:** the student completed both snippets, ran the app, and reported everything working end to end — grid, affordability gating, charity stepper, confirmation, and repeat redemptions.
+
+**Polish round 3 (student verify notes → applied):**
+
+1. **"Yung Bredda spelt wrong."** The wireframe card was transcribed as *Ying Bredda Concert Ticket*; corrected to **Yung Bredda Concert Ticket** in the seeder. `init` rebuilds the demo rows — `seed` is additive and would have left the old spelling sitting alongside the new one.
+2. **"Add more interesting student rewards."** The seeder grew from 8 to 14: the wireframe's eight plus **Campus Cafe Meal Voucher** (10h), **Library Late-Fee Waiver** (5h), **Gym Day Pass** (8h), **Movie Night Ticket** (12h), **Career Fair Fast-Track Entry** (15h) and **One-Month Parking Permit** (40h) — filling the cost gaps between the cheap conversions and the 100-hour prizes.
+3. **"Make rewards and charity tiles look more exciting."** Reward cards became `.reward-tile`: a gold→light-blue gradient top rule, a light-blue wash over the card, a gold-ringed icon medallion, the cost line in gold, and a hover lift with a deeper shadow. The charity dropdown became four `.charity-tile` cards (icon + name) that fill gold when chosen — the form still posts `charity_id`, so the student's route snippet needed no change.
+4. **"Make the select button light up when hovered."** `.btn-select` sits as a navy outline on white and fills gold with a soft glow on hover and focus; unaffordable cards use `.btn-select-disabled` (muted, `cursor: not-allowed`).
+5. **"Change the Student account badge to Welcome {name}."** The top bar now reads **Welcome, bob** for students, taken from `user.username`. The admin keeps the wireframe's grey *Admin Account*.
+6. **"Add a search bar for causes and rewards."** Both pages carry a GET search form (`?q=`) with a Clear button and a "No … match" empty state. Filtering happens in the repositories — `VolunteerCauseRepository.list_all` matches name or description, `RewardRepository.list_all` matches name, both `ilike` — passed through `CauseService.list_causes` / `RedeemService.grid`. The routes only bind `q`; no SQL in routers.
+
+**Polish round 4 (final change, student's call — hours capped at what the cause has):**
+
+- **Rule:** a submission may not claim more hours than the cause currently offers. `SubmissionService.check_hours_fit` owns it and `record_submission` calls it first, so the rule holds however the form is reached. `submit_hours_preview` runs the same check *before* the confirmation screen, and the final POST bounces back to the form with the message if it is ever bypassed. The route also stopped reaching past the service for the cause — `service.causes.get_by_id` is gone from `submit_hours_preview`; the service returns it.
+- **UX (student's choice: the same reaction as a missing required field):** the hours input takes the selected cause's balance as its `max`, and a hint under the field reads "N hours available for \<cause\>." Going over sets custom validity, so the browser blocks the POST and shows the same native red bubble and outline an empty required field gets — *"Your hours exceed the total available for this cause — Save the Turtles! has 35 hours."* The inline message under the field swaps to the same text.
+- **How it pairs with the approval rule:** only **approvals** spend a cause's hours, so several pending submissions can each fit inside the same balance — it is the admin's approval check (polish round 3) that refuses the later ones. Two halves of one rule: the student is stopped at the cause's balance, and so is the admin.
 
 
 

@@ -18,6 +18,13 @@ services:
         value: "3.12.7"
       - key: ENV
         value: production
+      # Render's free Postgres allows 5 concurrent connections — keep the
+      # pool well under it (2 + 1 overflow = 3 max) or first boot fails with
+      # "remaining connection slots".
+      - key: DB_POOL_SIZE
+        value: "2"
+      - key: DB_ADDITIONAL_OVERFLOW
+        value: "1"
       - key: DATABASE_URI
         fromDatabase:
           name: faststarter-db

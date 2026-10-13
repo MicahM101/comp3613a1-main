@@ -12,8 +12,8 @@ class CauseService:
     def __init__(self, causes: VolunteerCauseRepository):
         self.causes = causes
 
-    def list_causes(self) -> list[VolunteerCause]:
-        return self.causes.list_all()
+    def list_causes(self, search: str = "") -> list[VolunteerCause]:
+        return self.causes.list_all(search)
 
     def add_hours(self, *, cause_id: int, hours: float) -> VolunteerCause:
         """Give a cause more hours to offer students."""

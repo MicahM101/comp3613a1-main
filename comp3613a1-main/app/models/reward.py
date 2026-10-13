@@ -23,17 +23,19 @@ class Charity(SQLModel, table=True):
 
 
 class HoursRedemption(SQLModel, table=True):
-    """TODO(student): complete this table from the ERD block in docs/report.md.
+    """One redemption a student has made (Workflow 3).
 
-    It is the bridge between Student and Reward. The composite primary key is
-    scaffolded exactly as the ERD draws it. Add the other three attributes the
-    ERD lists for this entity, using the snake_case style Submission uses for
-    the ERD's camelCase names (hoursSpent -> hours_spent). Whatever you add
-    has to match what the redeem service sets when a student confirms.
+    Phase 5 revision (student's call): the ERD drew this as a composite key
+    of studentId + rewardId — one redemption per student per reward, which
+    would refuse a second donation outright. The student asked for repeat
+    redemptions, so the table carries its own ``id`` and the ERD's other
+    attributes, in the snake_case style Submission uses
+    (hoursSpent -> hours_spent).
     """
 
-    student_id: int = Field(foreign_key="student.id", primary_key=True)
-    reward_id: int = Field(foreign_key="reward.id", primary_key=True)
-    charity_id: int = Field(foreign_key="charity.id")
+    id: Optional[int] = Field(default=None, primary_key=True)
+    student_id: int = Field(foreign_key="student.id")
+    reward_id: int = Field(foreign_key="reward.id")
+    charity_id: Optional[int] = Field(default=None, foreign_key="charity.id")
     date_redeemed: date = Field(default_factory=date.today)
-    hours_spent: float = Field(default=0.0)
+    hours_spent: float

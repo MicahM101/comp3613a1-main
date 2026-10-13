@@ -2,7 +2,7 @@
 {% block title %}Convert hours{% endblock %}
 
 {% block subpage_content %}
-<div class="card cause-card-inner mx-auto" style="max-width: 40rem;">
+<div class="card cause-card-inner mx-auto" style="max-width: 44rem;">
   <div class="card-body p-4">
     <h1 class="h5 mb-4">How many hours would you like to convert to a Charity Donation?</h1>
 
@@ -18,15 +18,20 @@
       </div>
       <small class="text-muted d-block mb-4">You have {{ total|int }} verified hours available.</small>
 
-      <label class="form-label fw-semibold" for="charity_id">
-        Which Partner Charity would you like to make a donation to?
-      </label>
-      <select class="form-select mb-4" id="charity_id" name="charity_id" required>
-        <option value="" selected disabled>- Select Charity -</option>
+      <p class="fw-semibold mb-3">Which Partner Charity would you like to make a donation to?</p>
+
+      <div class="row g-3 mb-4">
         {% for charity in charities %}
-        <option value="{{ charity.id }}">{{ charity.charity_name }}</option>
+        <div class="col-6 col-md-3">
+          <label class="charity-tile">
+            <input class="visually-hidden" type="radio" name="charity_id"
+                   value="{{ charity.id }}" required>
+            <span class="material-symbols-outlined charity-icon" aria-hidden="true">volunteer_activism</span>
+            {{ charity.charity_name }}
+          </label>
+        </div>
         {% endfor %}
-      </select>
+      </div>
 
       <div class="d-flex justify-content-between">
         <a class="btn btn-outline-danger" href="{{ url_for('rewards_view') }}">Cancel</a>
