@@ -480,7 +480,7 @@ note: student chose a profile card for the admin Account tab over dropping the t
 
 Phase 6. Public Render URL (not localhost). Markers open this to mark the three workflows.
 
-**https://faststarter-sbp0.onrender.com/**
+https://faststarter-sbp0.onrender.com
 
 Deployed by hand in the Render dashboard from `render.yaml` (blueprint not applied, per the file's own warning):
 
@@ -503,6 +503,10 @@ Deployed by hand in the Render dashboard from `render.yaml` (blueprint not appli
 
 **Free-tier caveats:** the service sleeps after ~15 minutes idle (first visit takes 20–30s to wake), and free Postgres expires after 30 days. Uploaded documents live in `app/static/uploads`, which is **ephemeral** on Render — they survive until the next redeploy. Fine for marking; not a place to keep records.
 
+## GitHub repository
+
+https://github.com/MicahM101/comp3613a1-main
+
 ## Logins
 
 Every account a marker needs, including extra users you added. Starter accounts:
@@ -513,15 +517,21 @@ Every account a marker needs, including extra users you added. Starter accounts:
 
 ## YouTube URL
 
+https://youtu.be/Xj7gE3dm8LU
+
 ## Session transcripts
 
 Filled when the Guide builds the report: the agent writes chat markdown into `docs/transcripts/`; `python manage.py report` packages them.
 
-Guide packaged **1** chat(s) in `docs/transcripts/` (and `docs/transcripts.zip`).
+Guide packaged **5** chat(s) in `docs/transcripts/` (and `docs/transcripts.zip`).
 
 Index: [docs/transcripts/INDEX.md](transcripts/INDEX.md)
 
 - [`opencode-phase5-6-build-polish-deploy`](transcripts/opencode-phase5-6-build-polish-deploy.md)
+- [`phase-1-workflows`](transcripts/phase-1-workflows.md)
+- [`phase-2-use-case`](transcripts/phase-2-use-case.md)
+- [`phase-3-model`](transcripts/phase-3-model.md)
+- [`phase-4-wireframes`](transcripts/phase-4-wireframes.md)
 
 ## Competency (student-judge)
 
