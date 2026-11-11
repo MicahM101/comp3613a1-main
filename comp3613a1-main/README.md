@@ -152,6 +152,34 @@ The app binds `0.0.0.0` and reads `PORT` when Render sets it. Locally it uses `A
 
 ---
 
+## Testing (Assignment 2)
+
+Test plans live in [`docs/test-plans/`](docs/test-plans/) — UAT, unit, and
+integration — with a run-and-report guide in
+[`docs/test-plans/README.md`](docs/test-plans/README.md).
+
+```bash
+python -m pytest tests/unit -q           # unit suite (isolated, no DB)
+python -m pytest tests/integration -q    # integration suite (TestClient + temp DB)
+python -m pytest -q                      # full suite
+```
+
+The suites use their own temporary database — your `database.db` is never
+touched by pytest.
+
+**Postman collection** (29 requests, all with test scripts):
+
+```bash
+cd postman
+npx newman run StudentAwards.postman_collection.json   # server must be running
+```
+
+Run `python manage.py init` before a fresh newman run — the collection
+submits and reviews real data. Collection and fixtures:
+[`postman/StudentAwards.postman_collection.json`](postman/StudentAwards.postman_collection.json).
+
+---
+
 ## Deploy (Render MCP)
 
 **Phase 6** — only after Phase 5 polish (named workflows work locally and you have steered UI/workflow/model refinements). Deploy a **Postgres database** and the **web app** on Render’s free plan. Agents talk to Render through the [Render MCP server](https://render.com/docs/mcp-server) (`https://mcp.render.com/mcp`). This repo already ships the MCP config for each supported agent — do **not** paste an API key into a committed file. Do not put the **database** password in the report or the video. **App** usernames and passwords belong in `docs/report.md`.
@@ -319,6 +347,9 @@ comp3613a1
 |    |- static/
 |    |- templates/
 |    |- utilities/
+|-- tests/                    # pytest: tests/unit + tests/integration
+|-- postman/                  # Postman collection + upload fixture (newman)
+|-- docs/test-plans/          # UAT, unit, integration test plans (A2)
 ```
 
 > **Note:** Prefer a local `.env` (copy from `.env.example`). If `.env` is missing, settings load from `.env.example` (or legacy `env.example`). See `app/config.py`.

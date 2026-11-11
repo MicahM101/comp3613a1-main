@@ -1,0 +1,974 @@
+{
+  "info": {
+    "name": "Student Awards — COMP 3613 A2 API Tests",
+    "description": "API + workflow tests for the Student Awards application (COMP 3613 Assignment 2).\n\n**Before you run — entry criteria:**\n1. Reset and seed the demo database: `python manage.py init`\n2. Start the app: `python manage.py run` (http://localhost:5000)\n3. Import this collection and keep **Automatically follow redirects** enabled (the Postman default).\n4. **Run the collection top to bottom** — later folders reuse the session cookie and the variables (`cause_id`, `reward_id`, `document_path`, `submission_id`) set by earlier requests.\n\nIf you run it from the repository root with Newman, use:\n`npx newman run postman/StudentAwards.postman_collection.json`\n\nFolders: Smoke → Authentication → API (student) → Workflow 1 Submit Hours → Workflow 3 Redeem Progress → Workflow 2 Verify Hours (admin).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"Every response arrives in under 2 seconds\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Smoke — public endpoints and refused access",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Body reports ok\", function () {",
+                  "    pm.expect(pm.response.json().ok).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/causes without a session — refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Answers with a JSON detail\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/causes"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/submissions without a session — refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Answers with a JSON detail\", function () {",
+                  "    pm.expect(pm.response.json()).to.have.property(\"detail\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/submissions"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin without a session — sign-in page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Shows the session-expired page\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Session Expired\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication",
+      "item": [
+        {
+          "name": "POST /register — create a new student",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Redirected to the login page\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/login\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Student Awards\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Flash confirms the registration\", function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.text()).to.include(\"Registration completed\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "username", "value": "student{{$randomUUID}}", "type": "text" },
+                { "key": "email", "value": "{{$randomUUID}}@example.com", "type": "text" },
+                { "key": "password", "value": "testpass123", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/register"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /login — student (bob)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Signed in and sent to the Account page\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/app\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Recent Cause Contributions\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Session cookie was set\", function () {",
+                  "    pm.expect(pm.cookies.get(\"access_token\")).to.be.a(\"string\").that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "username", "value": "bob", "type": "text" },
+                { "key": "password", "value": "bobpass", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/login"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /login — wrong password is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Sent back to the login page\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/login\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Student Awards\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Flash explains the failure\", function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.text()).to.include(\"Incorrect username or password\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "username", "value": "bob", "type": "text" },
+                { "key": "password", "value": "definitely-wrong", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/login"
+          },
+          "response": []
+        },
+        {
+          "name": "GET / — landing page while signed in",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Shows the product brand\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Student Awards\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. API (student session)",
+      "item": [
+        {
+          "name": "GET /api/users — accounts without passwords",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns a non-empty list of accounts\", function () {",
+                  "    const users = pm.response.json();",
+                  "    pm.expect(users).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "pm.test(\"No password is ever returned\", function () {",
+                  "    pm.response.json().forEach(function (user) {",
+                  "        pm.expect(user).to.have.all.keys(\"id\", \"username\", \"email\");",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/users"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/causes — the causes catalogue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns the seeded causes\", function () {",
+                  "    const causes = pm.response.json();",
+                  "    pm.expect(causes).to.be.an(\"array\").that.is.not.empty;",
+                  "    const names = causes.map(function (c) { return c.cause_name; });",
+                  "    pm.expect(names).to.include(\"Save the Turtles!\");",
+                  "});",
+                  "pm.test(\"First cause id saved for Workflow 1\", function () {",
+                  "    const causes = pm.response.json();",
+                  "    pm.collectionVariables.set(\"cause_id\", causes[0].id);",
+                  "    pm.expect(pm.collectionVariables.get(\"cause_id\")).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/causes"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/rewards — affordability for bob",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Every card carries its affordability\", function () {",
+                  "    const rewards = pm.response.json();",
+                  "    pm.expect(rewards).to.be.an(\"array\").that.is.not.empty;",
+                  "    rewards.forEach(function (r) {",
+                  "        pm.expect(r).to.have.property(\"affordable\");",
+                  "        pm.expect(r).to.have.property(\"hours_needed\");",
+                  "    });",
+                  "    const costs = rewards.map(function (r) { return r.hour_cost; });",
+                  "    pm.expect(costs).to.deep.equal(costs.slice().sort(function (a, b) { return a - b; }));",
+                  "});",
+                  "pm.test(\"Cheapest affordable reward saved for Workflow 3\", function () {",
+                  "    const rewards = pm.response.json();",
+                  "    const gift = rewards.find(function (r) {",
+                  "        return r.affordable && r.reward_name !== \"Charity Conversion\";",
+                  "    });",
+                  "    pm.expect(gift, \"an affordable reward\").to.not.be.undefined;",
+                  "    pm.collectionVariables.set(\"reward_id\", gift.id);",
+                  "    const charity = rewards.find(function (r) {",
+                  "        return r.reward_name === \"Charity Conversion\";",
+                  "    });",
+                  "    if (charity) { pm.collectionVariables.set(\"charity_reward_id\", charity.id); }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/rewards"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/submissions as a student — refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Explains the missing permission\", function () {",
+                  "    const detail = pm.response.json().detail;",
+                  "    pm.expect(detail.toLowerCase()).to.include(\"not authorized\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/submissions"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Workflow 1 — Submit Hours",
+      "item": [
+        {
+          "name": "GET /app/hours/new — the submission form",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Form lists the causes to serve\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Save the Turtles!\");",
+                  "});",
+                  "pm.test(\"Form offers a document upload\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"type=\\\"file\\\"\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/app/hours/new"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /app/hours/new — preview with document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Shows the confirmation screen\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include(\"Are you sure you want to submit?\");",
+                  "});",
+                  "pm.test(\"Stored document path captured for the confirm step\", function () {",
+                  "    const html = pm.response.text();",
+                  "    const marker = 'name=\"document_path\" value=\"';",
+                  "    const start = html.indexOf(marker);",
+                  "    pm.expect(start, \"document_path hidden field\").to.be.above(-1);",
+                  "    const from = start + marker.length;",
+                  "    const path = html.slice(from, html.indexOf('\"', from));",
+                  "    pm.collectionVariables.set(\"document_path\", path);",
+                  "    pm.expect(path).to.include(\"/static/uploads/\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "cause_id", "value": "{{cause_id}}", "type": "text" },
+                { "key": "hours", "value": "2", "type": "text" },
+                { "key": "served_on", "value": "2026-10-05", "type": "text" },
+                { "key": "time_hour", "value": "09", "type": "text" },
+                { "key": "time_minute", "value": "30", "type": "text" },
+                { "key": "meridiem", "value": "AM", "type": "text" },
+                {
+                  "key": "document",
+                  "type": "file",
+                  "src": "fixtures/participation-form.pdf"
+                }
+              ]
+            },
+            "url": "{{base_url}}/app/hours/new"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /app/hours/confirm — record the submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Back to the Account page\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/app\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Recent Cause Contributions\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Flash confirms the submission\", function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.text()).to.include(\"submitted successfully\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "cause_id", "value": "{{cause_id}}", "type": "text" },
+                { "key": "hours", "value": "2", "type": "text" },
+                { "key": "date_completed", "value": "2026-10-05", "type": "text" },
+                { "key": "start_time", "value": "09:30 AM", "type": "text" },
+                { "key": "document_path", "value": "{{document_path}}", "type": "text" },
+                { "key": "document_name", "value": "participation-form.pdf", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/app/hours/confirm"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /app — tracker shows the pending row",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account dashboard is shown\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Recent Cause Contributions\");",
+                  "});",
+                  "pm.test(\"A row is waiting in the pending state\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"state-pending\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/app"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Workflow 3 — Redeem Progress",
+      "item": [
+        {
+          "name": "GET /rewards — the grid and the running total",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Shows the student's running total\", function () {",
+                  "    const match = pm.response.text().match(/Total Hours:\\s*(\\d+)/);",
+                  "    pm.expect(match, \"Total Hours line\").to.not.be.null;",
+                  "    pm.collectionVariables.set(\"total_before\", Number(match[1]));",
+                  "});",
+                  "pm.test(\"Reward cards are listed\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Library Late-Fee Waiver\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/rewards"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /rewards/{reward_id}/redeem — confirmation screen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Asks the student to confirm\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Are you sure?\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/rewards/{{reward_id}}/redeem"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /rewards/{reward_id}/redeem — spend the hours",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Back to the rewards grid\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/rewards\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Total Hours:\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Flash confirms the redemption\", function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.text()).to.include(\"Redemption successful!\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": "{{base_url}}/rewards/{{reward_id}}/redeem"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /rewards — balance was reduced",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"The balance dropped after the redemption\", function () {",
+                  "    const match = pm.response.text().match(/Total Hours:\\s*(\\d+)/);",
+                  "    pm.expect(match, \"Total Hours line\").to.not.be.null;",
+                  "    const after = Number(match[1]);",
+                  "    const before = Number(pm.collectionVariables.get(\"total_before\"));",
+                  "    pm.expect(after, \"balance after redemption\").to.be.below(before);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/rewards"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Workflow 2 — Verify Hours (admin)",
+      "item": [
+        {
+          "name": "POST /login — admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Signed in and sent to the queue\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/admin\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Recent Submission Requests\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "username", "value": "admin", "type": "text" },
+                { "key": "password", "value": "adminpass", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/login"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/submissions — the pending queue as JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Only pending rows are queued\", function () {",
+                  "    const rows = pm.response.json();",
+                  "    pm.expect(rows).to.be.an(\"array\").that.is.not.empty;",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row.state).to.equal(\"pending\");",
+                  "    });",
+                  "});",
+                  "pm.test(\"Queue size and first submission saved\", function () {",
+                  "    const rows = pm.response.json();",
+                  "    pm.collectionVariables.set(\"queue_count\", rows.length);",
+                  "    pm.collectionVariables.set(\"submission_id\", rows[0].id);",
+                  "    pm.expect(pm.collectionVariables.get(\"submission_id\")).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/submissions"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin — the review queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Queue heading is shown\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Recent Submission Requests\");",
+                  "});",
+                  "pm.test(\"Search box is available\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Search submissions\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/submissions/{id} — the review card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Card offers the decision buttons\", function () {",
+                  "    const html = pm.response.text();",
+                  "    pm.expect(html).to.include(\"Approve\");",
+                  "    pm.expect(html).to.include(\"Reject\");",
+                  "});",
+                  "pm.test(\"Supporting document is linked\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"/static/uploads/\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/submissions/{{submission_id}}"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin/submissions/{id}/decision/approved — confirm screen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Asks for confirmation\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Approve student's Hours?\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin/submissions/{{submission_id}}/decision/approved"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /admin/submissions/{id}/decision — approve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Back to the queue\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/admin\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Recent Submission Requests\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Flash confirms the decision\", function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.text()).to.include(\"Submission approved successfully.\");",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "state", "value": "approved", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/admin/submissions/{{submission_id}}/decision"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /admin — the decided row left the queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Queue heading is shown\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Recent Submission Requests\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/admin"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/submissions — one row left the queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Queue shrank by exactly one row\", function () {",
+                  "    const rows = pm.response.json();",
+                  "    const before = Number(pm.collectionVariables.get(\"queue_count\"));",
+                  "    pm.expect(rows.length).to.equal(before - 1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/submissions"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /logout — end the admin session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Sent back to the login page\", function () {",
+                  "    pm.expect([200, 303]).to.include(pm.response.code);",
+                  "    if (pm.response.code === 303) {",
+                  "        pm.expect(pm.response.headers.get(\"Location\")).to.include(\"/login\");",
+                  "    } else {",
+                  "        pm.expect(pm.response.text()).to.include(\"Student Awards\");",
+                  "    }",
+                  "});",
+                  "pm.test(\"Session cookie was cleared\", function () {",
+                  "    const cookie = pm.cookies.get(\"access_token\");",
+                  "    pm.expect(!cookie || cookie.length === 0, \"access_token removed\").to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/logout"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

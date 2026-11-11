@@ -25,6 +25,7 @@ from . import (
     causes,
     rewards,
     users,
+    api_catalog,
     logout,
     server_config,
 )

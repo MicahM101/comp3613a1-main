@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
 from starlette.middleware import Middleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse
@@ -61,9 +62,16 @@ async def health():
 
 @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
 async def unauthorized_redirect_handler(request: Request, exc: Exception):
+    # REST convention: API clients get a JSON 401; browsers get the page.
+    if request.url.path.startswith("/api"):
+        return JSONResponse(
+            {"detail": getattr(exc, "detail", "Could not validate credentials")},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
     return templates.TemplateResponse(
         request=request,
         name="401.html",
+        status_code=status.HTTP_401_UNAUTHORIZED,
     )
 
 
